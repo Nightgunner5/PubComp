@@ -14,7 +14,7 @@ function spawnTF2( map ) {
 	}
 
 	// Start TF2 server
-	tf2 = spawn( '../tfds/tf2/orangebox/srcds', ['-autoupdate', '-nohltv', '-maxplayers', '20', '+rcon_password', tf2_rcon, '+map', map, '-game', 'tf'], {cwd: '../tfds/tf2/orangebox'} );
+	tf2 = spawn( './srcds', ['-autoupdate', '-nohltv', '-maxplayers', '20', '+rcon_password', tf2_rcon, '+map', map, '-game', 'tf'], {cwd: '../tfds/orangebox'} );
 	tf2.on( 'exit', function( code ) {
 		tf2 = null;
 	} );
@@ -22,6 +22,11 @@ function spawnTF2( map ) {
 	tf2.stdout.on( 'data', function( data ) {
 		buffer += data;
 		console.log(data);
+	} );
+	tf2.stderr.setEncoding( 'utf8' );
+	tf2.stderr.on( 'data', function( data ) {
+		buffer += data;
+		console.error(data);
 	} );
 }
 
