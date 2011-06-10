@@ -2,10 +2,19 @@ var http = require('http'),
 	spawn = require('child_process').spawn,
 	parse = require('url').parse,
 	tf2 = null,
+	tf2_rcon = '',
+	rcon_chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'.split( '' )
 	buffer = '';
 
 function spawnTF2( map ) {
-	tf2 = spawn( '../tfds/tf2/orangebox/srcds', ['-console', '+map', map, '-game', 'tf'], {cwd: '../tfds/tf2/orangebox'} );
+	// Randomize RCON password
+	tf2_rcon = '';
+	for ( var i = 0; i < 64; i++ ) {
+		tf2_rcon += rcon_chars[Math.floor( Math.random() * rcon_chars.length )];
+	}
+
+	// Start TF2 server
+	tf2 = spawn( '../tfds/tf2/orangebox/srcds', ['-autoupdate', '-nohltv', '-maxplayers', '20', '+rcon_password', tf2_rcon, '+map', map, '-game', 'tf'], {cwd: '../tfds/tf2/orangebox'} );
 	tf2.on( 'exit', function( code ) {
 		tf2 = null;
 	} );
@@ -28,5 +37,4 @@ http.createServer( function( req, res ) {
 	} else {
 		res.end( '<pre>TF2 is NOT running. <a href="?start=cp_gravelpit">Start it.</a>\n\n' + buffer + '</pre>' );
 	}
-	buffer = '';
 } ).listen( 27014, '0.0.0.0' );
