@@ -1,0 +1,50 @@
+<!DOCTYPE html><html><head><title>PubComp</title><script src="/socket.io/socket.io.js"></script><style type="text/css">#online, #status { float: right; }</style></head><body><div id="online"></div><div id="status"></div>
+<button id="create" disabled>Getting TF2 state...</button>
+<script>
+var socket;
+window.onload = function(){
+	socket = new io.Socket( null, {port: 27014, rememberTransport: true} ), status = document.getElementById( 'status' ), online = document.getElementById( 'online' );
+	socket.connect();
+	socket.on('message', function( obj ) {
+		if ( typeof obj != 'object' ) {
+			return;
+		}
+		if ( 'numOnline' in obj ) {
+			online.innerHTML = '&nbsp;' + obj.numOnline + ' users online.';
+		}
+		if ( 'tf' in obj ) {
+			var create = document.getElementById( 'create' );
+			switch ( obj.tf ) {
+				case 'offline':
+					create.innerHTML = 'Create a match';
+					create.disabled = false;
+					create.onclick = function(){
+						socket.send( {action: 'create_match'} );
+					};
+					break;
+				case 'starting':
+					create.innerHTML = 'TF2 server starting...';
+					create.disabled = true;
+					create.onclick = function(){};
+					break;
+				case 'online':
+					create.innerHTML = 'Join match';
+					create.disabled = false;
+					create.onclick = function(){
+						socket.send( {action: 'join_match', steamid: 'STEAM_0:0:26649930'} );
+					};
+					break;
+			}
+		}
+		if ( 'join' in obj ) {
+			location.href = 'steam://connect/' + obj.join;
+		}
+		console.log( obj );
+	});
+	socket.on('connect', function(){ status.innerHTML = 'Connected.' });
+	socket.on('disconnect', function(){ status.innerHTML = 'Lost connection.' });
+	socket.on('reconnect', function(){ status.innerHTML = 'Reconnected.' });
+	socket.on('reconnecting', function( nextRetry ){ status.innerHTML = 'Lost connection. Retrying in ' + ( nextRetry / 1000 ) + ' seconds.'; });
+	setTimeout( function(){ socket.send( {action: 'tf'} ) }, 5000 );
+};
+</script></body></html>
