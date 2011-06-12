@@ -41,6 +41,8 @@ function transformPlayed( played ) {
 	// would be last, etc.
 	var transformed = [];
 	played.forEach( function( map ) {
+		if ( transformed.indexOf( map ) != -1 )
+			return;
 		for ( var i = 0; i < transformed.length; i++ ) {
 			if ( numOccurances[map] > numOccurances[transformed[i]] ) {
 				transformed.splice( i, 0, map );
@@ -55,11 +57,11 @@ function transformPlayed( played ) {
 
 var priorities = realPriorities.slice( 0 ), unusedMaps = maps.slice( 0 ).filter( function( map ){ return priorities.indexOf( map ) == -1; } );
 unusedMaps.shuffle();
-priorities.splice( priorities.indexOf( '' ), 1, unusedMaps );
+priorities.splice.apply(priorities, [priorities.indexOf( '' ), 1].concat( unusedMaps ) );
 var played = transformPlayed( lastPlayed.slice( 0, 4 ) );
 played.forEach( function( map ) {
 	priorities.splice( priorities.indexOf( map ), 1 );
 	priorities.push( map );
 } );
 
-console.log( priorities );
+console.log( priorities.join( ', ' ) );
