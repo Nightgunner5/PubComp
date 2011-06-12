@@ -59,7 +59,7 @@ for ( var i = 0; i < 64; i++ ) {
 	tf2_rcon += rcon_chars[Math.floor( Math.random() * rcon_chars.length )];
 }
 
-tf2 = spawn( '../tfds/orangebox/srcds_run', [/*'-autoupdate',*/ '-steambin', '../../steam', '-maxplayers', '20', '+map', map, '+rcon_password', tf2_rcon, '+sv_logfile', '0', '+log_verbose_enable', '1', '+log_verbose_interval', '1', '+log', 'on', '+logaddress_add', '127.0.0.2:57015'] );
+tf2 = spawn( '../tfds/orangebox/srcds_run', ['-autoupdate', '-steambin', '../../steam', '-maxplayers', '20', '+map', map, '+rcon_password', tf2_rcon, '+sv_logfile', '0', '+log_verbose_enable', '1', '+log_verbose_interval', '1', '+log', 'on', '+logaddress_add', '127.0.0.2:57015'] );
 tf2state = 'starting';
 
 //rconSend( 2, 'pubcomp_add_steamid STEAM_0:0:26649930' );
@@ -93,11 +93,25 @@ socket.on( 'connection', function( client ) {
 					sendTF2State( client );
 					break;
 				case 'join_match':
+					var path;
 					if ( /^STEAM_\d:\d:\d+$/.test( message.steamid ) ) {
 						rconSend( 2, 'pubcomp_add_steamid ' + message.steamid );
 						setTimeout(function(){
 							client.broadcast({ 'joinserver': ip + ':27015' });
 						}, 100 );
+					} else if ( ( path = /^http:\/\/(?:www\.)?steamcommunity\.com(\/(profile|id)\/[^\/]+)$/.exec( message.steamid ) ) && path.length ) {
+						path = path[1];
+						http.get({ host: 'www.steamcommunity.com', port: 80, path: path + '?xml=1' }, function( res ) {
+							res.setEncoding( 'utf8' );
+							res.on( 'data', function( chunk ) {
+								var ID64 = /<steamID64>(\d+)<\/steamID64>/.exec( chunk );
+								if ( ID64 && ID64.length ) {
+									var steamID = 'STEAM_0:' + ( ID64[1] % 2 ) + ':' + ( ID64[1] - 76561197960265728 ) / 2;
+									rconSend( 2, 'pubcomp_add_steamid ' + steamID );
+									client.broadcast({ 'joinserver': ip + ':27015' });
+								}
+							} );
+						} );
 					}
 					break;
 			}

@@ -74,7 +74,7 @@ public OnClientAuthorized( client, const String:auth[] ) {
 	new bool:foundSteamID = findSteamID( auth );
 
 	if ( !foundSteamID ) {
-		KickClient( client, "Please join from the PubComp web interface.", auth );
+		KickClient( client, "Please join from the PubComp web interface." );
 	}
 }
 

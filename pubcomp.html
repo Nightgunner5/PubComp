@@ -19,7 +19,7 @@ window.onload = function(){
 					create.innerHTML = 'Join match';
 					create.disabled = false;
 					create.onclick = function(){
-						socket.send( {action: 'join_match', steamid: 'STEAM_0:0:26649930'} );
+						socket.send( {action: 'join_match', steamid: prompt( 'Please paste your Steam Community URL here:' )} );
 					};
 					break;
 				default:
