@@ -9,11 +9,11 @@ exports.create = function( callback ) {
 
 	var log = dgram.createSocket( 'udp4' );
 	log.on( 'message', function( msg, rinfo ) {
-		if ( msg.slice( 0, 7 ).toString( 'base64' ) != '/////1I=' ) {
+		if ( msg.slice( 0, 5 ).toString( 'base64' ) != '/////1I=' ) {
 			// Not a log message
 			return;
 		}
-		var line = msg.slice( 7 ).toString( 'utf8' ).replace( /\n/g, '' );
+		var line = msg.slice( 5 ).toString( 'utf8' ).replace( /\n/g, '' );
 		callback( line );
 	} );
 	return log;
