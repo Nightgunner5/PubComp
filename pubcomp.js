@@ -50,7 +50,7 @@ function spawnTF2( mode ) {
 	buffer = '';
 
 	// Start TF2 server
-	tf2 = spawn( './srcds_run', ['-autoupdate', '-nohltv', '-maxplayers', '20', '-game', 'tf', '+rcon_password', tf2_rcon, '+map', map], {cwd: '../tfds/orangebox'} );
+	tf2 = spawn( '../tfds/orangebox/srcds_linux', ['-autoupdate', '-steambin', '../../steam', '-maxplayers', '20', '+map', map, '+rcon_password', tf2_rcon] );
 	tf2.on( 'exit', function( code ) {
 		tf2 = null;
 		try { rcon.end(); } catch ( ex ) {}
@@ -128,3 +128,6 @@ socket.on( 'connection', function( client ) {
 		clients.broadcast({ 'numOnline': clients.length });
 	});
 } );
+setInterval( function() {
+	clients.broadcast({ 'numOnline': clients.length, 'tf': tf2 ? ( rcon ? 'online' : 'starting' ) : 'offline' });
+}, 5000 );
