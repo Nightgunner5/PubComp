@@ -20,6 +20,9 @@ window.onload = function(){
 					create.disabled = false;
 					create.onclick = function(){
 						socket.send( {action: 'join_match', steamid: prompt( 'Please paste your Steam Community URL here:' )} );
+						setTimeout( function(){
+							location.href = 'steam://connect/nightgunner5.is-a-geek.net:27015';
+						}, 1000 );
 					};
 					break;
 				default:

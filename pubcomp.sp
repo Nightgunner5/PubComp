@@ -26,7 +26,7 @@ public OnPluginStart() {
 bool:findSteamID( const String:id[] ) {
 	for ( new i = 0; i < 32; i++ ) {
 		if ( StrEqual( id, steamID[i] ) ) {
-			steamID[i][0] = 0;
+			//steamID[i][0] = 0;
 			return ( steamIDExpire[i] >= GetGameTime() );
 		}
 	}
@@ -74,7 +74,7 @@ public OnClientAuthorized( client, const String:auth[] ) {
 	new bool:foundSteamID = findSteamID( auth );
 
 	if ( !foundSteamID ) {
-		KickClient( client, "Please join from the PubComp web interface." );
+		KickClient( client, "Please join from the PubComp web interface" );
 	}
 }
 
