@@ -4,6 +4,7 @@ var http = require('http'),
 	spawn = require('child_process').spawn,
 	dgram = require("dgram"),
 	bignumber = require('bignumber').BigInteger,
+	logparser = require('tf2logparser').TF2LogParser,
 	tf2 = null,
 	tf2_rcon = '',
 	rcon_chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'.split( '' ),
@@ -12,8 +13,12 @@ var http = require('http'),
 	tf2state = 'unknown',
 	map = 'mge_training_v7';
 
-require('./logsocket').create(function(line) {
-	console.log( '%s', line );
+var log = logparser.create();
+require('./logsocket').create( function( line ) {
+	log.parseLine( line );
+	if ( tf2state == 'updating' || tf2state == 'unknown' ) {
+		tf2state = 'starting';
+	}
 	if ( line.indexOf( 'Started map' ) != -1 && !rcon ) {
 		rcon = require('./rcon').create( 27015, '127.0.0.1' ).password( tf2_rcon ).send( 'pubcomp_add_steamid ""' ).send( 'sv_downloadurl "http://' + ip + ':27014/tf/"' );
 		tf2state = 'almost';
@@ -31,8 +36,8 @@ for ( var i = 0; i < 64; i++ ) {
 	tf2_rcon += rcon_chars[Math.floor( Math.random() * rcon_chars.length )];
 }
 
-tf2 = spawn( '../tfds/orangebox/srcds_run', [/*'-autoupdate',*/ '-steambin', '../../steam', '-maxplayers', '20', '+map', map, '+rcon_password', tf2_rcon, '+sv_logfile', '0', '+log_verbose_enable', '1', '+log_verbose_interval', '1', '+log', 'on', '+logaddress_add', '127.0.0.2:57015', '+tf_bot_quota', '12', '+tf_bot_quota_mode', 'fill', '+sv_allowdownload', '1', '+sv_allowupload', '1'] );
-tf2state = 'starting';
+tf2 = spawn( '../tfds/orangebox/srcds_run', ['-autoupdate', '-steambin', '../../steam', '-maxplayers', '20', '-nobots', '+map', map, '+rcon_password', tf2_rcon, '+sv_logfile', '0', '+log_verbose_enable', '1', '+log_verbose_interval', '1', '+log', 'on', '+logaddress_add', '127.0.0.2:57015', '+sv_allowdownload', '1', '+sv_allowupload', '1'] );
+tf2state = 'updating';
 
 //rconSend( 2, 'pubcomp_add_steamid STEAM_0:0:26649930' );
 
@@ -132,6 +137,9 @@ socket.on( 'connection', function( client ) {
 	});
 } );
 setInterval( function() {
-	socket.broadcast({ 'numOnline': Object.keys( socket.clients ).length });
-	sendTF2State( socket );
+	socket.broadcast( {
+		'numOnline': Object.keys( socket.clients ).length,
+		'tf': tf2state,
+		'state': log.getLog()
+	} );
 }, 5000 );

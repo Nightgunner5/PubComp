@@ -35,7 +35,7 @@ window.onload = function(){
 		if ( 'joinserver' in obj ) {
 			location.href = 'steam://connect/' + obj.joinserver;
 		}
-		console.log( obj );
+		console.log( JSON.stringify( obj ) );
 	});
 	socket.on('connect', function(){ status.innerHTML = 'Connected.' });
 	socket.on('disconnect', function(){ status.innerHTML = 'Lost connection.' });
