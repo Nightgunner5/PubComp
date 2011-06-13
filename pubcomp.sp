@@ -33,15 +33,6 @@ bool:findSteamID( const String:id[] ) {
 	return false;
 }
 
-/*public Action:Timer_NobodyJoined( Handle:timer ) {
-	if ( GetClientCount( false ) == 0 ) {
-		LogMessage( "Shutting down server; no clients have connected." );
-		ServerCommand( "quit" );
-	}
-
-	return Plugin_Handled;
-}*/
-
 public Action:CommandAddSteamID( client, args ) {	  
 	if ( client != 0 ) {
 		LogMessage( "Client %d is not permitted to add users to the whitelist.", client );
@@ -83,11 +74,6 @@ public OnClientDisconnect_Post( client ) {
 		pubCompBotKicked = true;
 		return;
 	}
-
-	//if ( GetClientCount( false ) == 0 ) {
-	//	LogMessage( "Shutting down server; all clients have disconnected." );
-	//	ServerCommand( "quit" );
-	//}
 }
 
 public OnClientPutInServer( client ) {

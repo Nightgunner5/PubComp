@@ -11,7 +11,9 @@ var http = require('http'),
 	rcon = null,
 	ip = 'nightgunner5.is-a-geek.net',
 	tf2state = 'unknown',
-	map = 'mge_training_v7';
+	map = 'cp_granary';
+
+process.chdir( __dirname );
 
 var log = logparser.create();
 require('./logsocket').create( function( line ) {
@@ -20,7 +22,11 @@ require('./logsocket').create( function( line ) {
 		tf2state = 'starting';
 	}
 	if ( line.indexOf( 'Started map' ) != -1 && !rcon ) {
-		rcon = require('./rcon').create( 27015, '127.0.0.1' ).password( tf2_rcon ).send( 'pubcomp_add_steamid ""' ).send( 'sv_downloadurl "http://' + ip + ':27014/tf/"' );
+		rcon = require('./rcon').create( 27015, '127.0.0.1' )
+				.password( tf2_rcon )
+				.send( 'pubcomp_add_steamid ""' )
+				.send( 'sv_downloadurl "http://' + ip + ':27014/tf/"' )
+				.send( 'mp_tournament 1' );
 		tf2state = 'almost';
 		sendTF2State( socket );
 	}
@@ -36,7 +42,7 @@ for ( var i = 0; i < 64; i++ ) {
 	tf2_rcon += rcon_chars[Math.floor( Math.random() * rcon_chars.length )];
 }
 
-tf2 = spawn( '../tfds/orangebox/srcds_run', ['-autoupdate', '-steambin', '../../steam', '-maxplayers', '20', '-nobots', '+map', map, '+rcon_password', tf2_rcon, '+sv_logfile', '0', '+log_verbose_enable', '1', '+log_verbose_interval', '1', '+log', 'on', '+logaddress_add', '127.0.0.2:57015', '+sv_allowdownload', '1', '+sv_allowupload', '1'] );
+tf2 = spawn( '../tfds/orangebox/srcds_run', [process.argv.indexOf( '--noupdate' ) == -1 ? '-autoupdate' : '', '-steambin', '../../steam', '-maxplayers', '20', '-nobots', '+map', map, '+rcon_password', tf2_rcon, '+sv_logfile', '0', '+log_verbose_enable', '1', '+log_verbose_interval', '1', '+log', 'on', '+logaddress_add', '127.0.0.2:57015', '+sv_allowdownload', '1', '+sv_allowupload', '1'] );
 tf2state = 'updating';
 
 //rconSend( 2, 'pubcomp_add_steamid STEAM_0:0:26649930' );
@@ -46,7 +52,7 @@ function sendTF2State( client ) {
 }
 
 var server = http.createServer( function( req, res ) {
-	if ( req.url == '/' ) {
+	if ( req.url == '/pubcomp' ) {
 		fs.readFile( 'pubcomp.html', function( err, data ) {
 			if ( err ) { res.writeHead( 404 ); res.end(); return; }
 			res.writeHead( 200, {'Content-Type': 'text/html'} );
@@ -81,7 +87,7 @@ var server = http.createServer( function( req, res ) {
 		res.end();
 	}
 } );
-server.listen( 27014 );
+server.listen( 27013 );
 
 var socket = io.listen( server );
 socket.on( 'connection', function( client ) {

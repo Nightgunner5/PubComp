@@ -1,5 +1,5 @@
 <!DOCTYPE html><html><head><title>PubComp</title><script src="/socket.io/socket.io.js"></script><style type="text/css">#online, #status { float: right; }</style></head><body><div id="online"></div><div id="status"></div>
-<button id="create" disabled="disabled">Getting TF2 state...</button>
+<button id="create" disabled="disabled">Getting TF2 state...</button><br/><div id="game" style="display: none;">BLU: <span id="bluscore"></span><br/>RED: <span id="redscore"></span></div>
 <script>
 var socket;
 window.onload = function(){
@@ -34,6 +34,26 @@ window.onload = function(){
 		}
 		if ( 'joinserver' in obj ) {
 			location.href = 'steam://connect/' + obj.joinserver;
+		}
+		if ( 'state' in obj ) {
+			var state = obj.state;
+			
+			if ( state.players.length ) {
+				document.getElementById( 'game' ).style.display = 'block';
+			} else {
+				document.getElementById( 'game' ).style.display = 'none';
+			}
+			document.getElementById( 'bluscore' ).innerHTML = state.blueScore;
+			document.getElementById( 'redscore' ).innerHTML = state.redScore;
+  /*var _log = {
+    blueScore: 0,
+    redScore: 0,
+    elapsedTime: 0,
+    gameSeconds: 0,
+    mapName: "",
+    events: [],
+    players: []
+  };*/
 		}
 		console.log( JSON.stringify( obj ) );
 	});
