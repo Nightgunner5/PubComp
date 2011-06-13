@@ -89,3 +89,11 @@ public OnClientDisconnect_Post( client ) {
 	//	ServerCommand( "quit" );
 	//}
 }
+
+public OnClientPutInServer( client ) {
+	decl String:map[PLATFORM_MAX_PATH];
+	GetCurrentMap( map, PLATFORM_MAX_PATH );
+	if ( StrEqual( map, "mge_training_v7" ) ) {
+		FakeClientCommand( client, "say /first" );
+	}
+}
