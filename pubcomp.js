@@ -1,22 +1,23 @@
-var http = require('http'),
-	io = require('socket.io'),
-	fs = require('fs'),
-	spawn = require('child_process').spawn,
-	dgram = require("dgram"),
-	bignumber = require('bignumber').BigInteger,
-	logparser = require('tf2logparser').TF2LogParser,
+var http = require( 'http' ),
+	io = require( 'socket.io'),
+	fs = require( 'fs' ),
+	spawn = require( 'child_process' ).spawn,
+	dgram = require( 'dgram' ),
+	bignumber = require( 'bignumber' ).BigInteger,
+	logparser = require( 'tf2logparser' ).TF2LogParser,
 	tf2 = null,
 	tf2_rcon = '',
 	rcon_chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'.split( '' ),
 	rcon = null,
-	ip = 'nightgunner5.is-a-geek.net',
 	tf2state = 'unknown',
-	map = 'cp_granary';
+	map = 'cp_granary',
+	config = require( './config' );
 
 process.chdir( __dirname );
 
-var log = logparser.create();
+var log = logparser.create(), filelog = fs.createWriteStream( 'debug.log' );
 require('./logsocket').create( function( line ) {
+	filelog.write( line + '\n', 'utf8' );
 	log.parseLine( line );
 	if ( tf2state == 'updating' || tf2state == 'unknown' ) {
 		tf2state = 'starting';
@@ -25,8 +26,9 @@ require('./logsocket').create( function( line ) {
 		rcon = require('./rcon').create( 27015, '127.0.0.1' )
 				.password( tf2_rcon )
 				.send( 'pubcomp_add_steamid ""' )
-				.send( 'sv_downloadurl "http://' + ip + ':27014/tf/"' )
-				.send( 'mp_tournament 1' );
+				.send( 'sv_downloadurl "http://' + config.SERVERIP + ':27014/tf/"' )
+				.send( 'mp_tournament 1; mp_tournament_allow_non_admin_restart 0' )
+				.send( 'tf_bot_quota 12; tf_bot_quota_mode fill' );
 		tf2state = 'almost';
 		sendTF2State( socket );
 	}
@@ -42,7 +44,7 @@ for ( var i = 0; i < 64; i++ ) {
 	tf2_rcon += rcon_chars[Math.floor( Math.random() * rcon_chars.length )];
 }
 
-tf2 = spawn( '../tfds/orangebox/srcds_run', [process.argv.indexOf( '--noupdate' ) == -1 ? '-autoupdate' : '', '-steambin', '../../steam', '-maxplayers', '20', '-nobots', '+map', map, '+rcon_password', tf2_rcon, '+sv_logfile', '0', '+log_verbose_enable', '1', '+log_verbose_interval', '1', '+log', 'on', '+logaddress_add', '127.0.0.2:57015', '+sv_allowdownload', '1', '+sv_allowupload', '1'] );
+tf2 = spawn( '../tfds/orangebox/srcds_run', [process.argv.indexOf( '--noupdate' ) == -1 ? '-autoupdate' : '', '-steambin', '../../steam', '-maxplayers', '20', '+tv_enable', '1', '+map', map, '+rcon_password', tf2_rcon, '+sv_logfile', '0', '+log_verbose_enable', '1', '+log_verbose_interval', '1', '+log', 'on', '+logaddress_add', '127.0.0.2:57015', '+sv_allowdownload', '1', '+sv_allowupload', '1', '+hostname', 'PubComp ' + config.SERVERNAME] );
 tf2state = 'updating';
 
 //rconSend( 2, 'pubcomp_add_steamid STEAM_0:0:26649930' );
@@ -55,8 +57,12 @@ var server = http.createServer( function( req, res ) {
 	if ( req.url == '/pubcomp' ) {
 		fs.readFile( 'pubcomp.html', function( err, data ) {
 			if ( err ) { res.writeHead( 404 ); res.end(); return; }
-			res.writeHead( 200, {'Content-Type': 'text/html'} );
-			res.write( data, 'utf8' );
+			res.writeHead( 200, {'Content-Type': 'text/html; charset=utf-8'} );
+			res.write( data.toString( 'utf8' ).replace( /\{([A-Z]+?)\}/g, function( a, b ) {
+				if ( b in config )
+					return config[b];
+				return a;
+			} ), 'utf8' );
 			res.end();
 		} );
 	} else if ( /\/tf\/.*\.bz2$/.test( req.url ) && req.url.indexOf( '..' ) == -1 ) {
@@ -105,12 +111,12 @@ socket.on( 'connection', function( client ) {
 			case 'join_match':
 				if ( !rcon )
 					break;
-				client.broadcast({ 'joinserver': ip + ':27015' });
+				//client.broadcast({ 'joinserver': config.SERVERIP + ':27015' });
 				var path;
 				if ( /^STEAM_\d:\d:\d+$/.test( message.steamid ) ) {
 					rcon.send( 'pubcomp_add_steamid ' + message.steamid );
 					setTimeout(function(){
-						client.broadcast({ 'joinserver': ip + ':27015' });
+						client.broadcast({ 'joinserver': config.SERVERIP + ':27015' });
 					}, 100 );
 				} else if ( ( path = /^http:\/\/(?:www\.)?steamcommunity\.com(\/(profile|id)\/[^\/]+)$/.exec( message.steamid ) ) && path.length ) {
 					path = path[1];
@@ -129,7 +135,7 @@ socket.on( 'connection', function( client ) {
 								ID64 = new bignumber( ID64[1] );
 								var steamID = 'STEAM_0:' + ID64.mod( new bignumber( '2' ) ) + ':' + ( ID64.subtract( new bignumber( '76561197960265728' ) ).shiftRight( 1 ) );
 								rcon.send( 'pubcomp_add_steamid ' + steamID );
-								client.broadcast({ 'joinserver': ip + ':27015' });
+								console.log( client.broadcast({ 'joinserver': config.SERVERIP + ':27015' }) );
 							}
 						} );
 					} );
@@ -142,10 +148,15 @@ socket.on( 'connection', function( client ) {
 		socket.broadcast({ 'numOnline': Object.keys( socket.clients ).length });
 	});
 } );
+function filterLog( log ) {
+	var filtered = JSON.parse( JSON.stringify( log ) );
+	filtered.events = filtered.events.slice(Math.max(0, filtered.events.length - 5));
+	return filtered;
+}
 setInterval( function() {
 	socket.broadcast( {
 		'numOnline': Object.keys( socket.clients ).length,
 		'tf': tf2state,
-		'state': log.getLog()
+		'state': filterLog( log.getLog() )
 	} );
 }, 5000 );

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd "`dirname \`realpath \"$0\"\``"
+cd '../tfds/orangebox/tf/addons/sourcemod/scripting/pubcomp'
 
 test -e compiled || mkdir compiled
 

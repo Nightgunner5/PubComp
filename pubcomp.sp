@@ -26,7 +26,7 @@ public OnPluginStart() {
 bool:findSteamID( const String:id[] ) {
 	for ( new i = 0; i < 32; i++ ) {
 		if ( StrEqual( id, steamID[i] ) ) {
-			//steamID[i][0] = 0;
+			steamID[i][0] = 0;
 			return ( steamIDExpire[i] >= GetGameTime() );
 		}
 	}
@@ -62,6 +62,18 @@ public Action:CommandAddSteamID( client, args ) {
 }
 
 public OnClientAuthorized( client, const String:auth[] ) {
+	// Don't kick the SourceTV bot or the replay bot.
+	if ( StrEqual( auth, "BOT" ) ) {
+		decl String:botName[MAX_NAME_LENGTH];
+		GetClientName( client, botName, MAX_NAME_LENGTH );
+		decl String:sourceTV[MAX_NAME_LENGTH];
+		new Handle:_sourceTV = FindConVar( "tv_name" );
+		GetConVarString( _sourceTV, sourceTV, MAX_NAME_LENGTH );
+		CloseHandle( _sourceTV );
+		if ( StrEqual( botName, "replay" ) || StrEqual( botName, sourceTV ) )
+			return;
+	}
+
 	new bool:foundSteamID = findSteamID( auth );
 
 	if ( !foundSteamID ) {

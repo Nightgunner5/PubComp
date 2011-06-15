@@ -1,16 +1,90 @@
-<!DOCTYPE html><html><head><title>PubComp</title><script src="/socket.io/socket.io.js"></script><style type="text/css">#online, #status { float: right; }</style></head><body><div id="online"></div><div id="status"></div>
-<button id="create" disabled="disabled">Getting TF2 state...</button><br/><div id="game" style="display: none;">BLU: <span id="bluscore"></span><br/>RED: <span id="redscore"></span></div>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en-US">
+	<head profile="http://gmpg.org/xfn/11">
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+		<title>PubComp {SERVERNAME} Status</title
+		<meta name="generator" content="PubComp" />
+		<link rel="stylesheet" href="http://{SITEURL}/wp-content/plugins/buddypress/bp-themes/bp-default/style.css" type="text/css" media="screen" />
+		<script type='text/javascript' src='http://{SITEURL}/wp-content/plugins/buddypress/bp-themes/bp-default/_inc/global.js?ver=3.0.5'></script>
+		<link rel='index' title='PubComp' href='http://{SITEURL}/' />
+		<style type="text/css">#header{background-image:url(http://{SITEURL}/wp-content/plugins/buddypress/bp-themes/bp-default/_inc/images/default_header.jpg)}#header h1 a,#desc{color:#fff}</style>
+		<script type="text/javascript"> jQuery(document).ready( function() { jQuery("a.confirm").click( function() { if ( confirm( 'Are you sure?' ) ) return true; else return false; }); });</script>
+		<script src="/socket.io/socket.io.js"></script><style type="text/css">[id^="blurb-"] { display: none; }</style>
+	</head>
+
+	<body class="page page-template page-template-serverstats" id="bp-default">
+		<div id="header">
+			<h1 id="logo"><a href="http://{SITEURL}" title="Home">PubComp</a></h1>
+			<ul id="nav">
+				<li>
+					<a href="http://{SITEURL}" title="Home">Home</a>
+				</li>
+
+				<li>
+					<a href="http://{SITEURL}/activity/" title="Activity">Activity</a>
+				</li>
+
+				
+				<li>
+					<a href="http://{SITEURL}/members/" title="Members">Members</a>
+				</li>
+
+				<li>
+					<a href="http://{SITEURL}/groups/" title="Groups">Groups</a>
+				</li>
+
+				<li>
+					<a href="http://{SITEURL}/forums/" title="Forums">Forums</a>
+				</li>
+			</ul><!-- #nav -->
+
+			<div id="search-bar">
+				<div class="padder">
+					<form action="http://{SERVERURL}/search" method="post" id="search-form">
+						<input type="text" id="search-terms" name="search-terms" value="" />
+						<select name="search-which" id="search-which" style="width: auto"><option value="members">Members</option><option value="groups">Groups</option><option value="forums">Forums</option></select>
+						<input type="submit" name="search-submit" id="search-submit" value="Search" />
+					</form><!-- #search-form -->
+				</div><!-- .padder -->
+			</div><!-- #search-bar -->
+		</div><!-- #header -->
+<div id="container">
+	<div id="content">
+		<div class="padder">
+		<div class="page" id="blog-page">
+				<h2 class="pagetitle">PubComp {SERVERNAME} Status</h2>
+				<div class="post">
+					<div class="entry">
+<button id="create" disabled="disabled">Getting TF2 state...</button>
+<div id="blurb-updating">The TF2 server is currently checking for updates. It might be a while before it's ready for use.</div>
+<div id="blurb-starting">The TF2 server has finished checking for updates and will now start. It will only be a minute or two before the server is ready.</div>
+<div id="blurb-almost">The TF2 server is almost ready. This stage in startup is the final plugin initialization. It should be ready in under a minute.</div>
+<div id="blurb-online">The TF2 server is ready for a match. There <span id="player-count">are no players</span> on it right now.</div>
+<br/><div id="game" style="display: none;">BLU: <span id="bluscore"></span><br/>RED: <span id="redscore"></span></div>
+					</div>
+				</div>
+		</div><!-- .page -->
+		</div><!-- .padder -->
+	</div><!-- #content -->
+
+<div id="sidebar">
+	<div class="padder">
+<div id="online"></div><div id="status"></div>
+	</div><!-- .padder -->
+</div><!-- #sidebar -->
+</div> <!-- #container -->
 <script>
 var socket;
 window.onload = function(){
-	socket = new io.Socket( null, {port: 27014, rememberTransport: true} ), status = document.getElementById( 'status' ), online = document.getElementById( 'online' );
+	socket = new io.Socket( null, {port: 27013, rememberTransport: true} ), status = document.getElementById( 'status' ), usersOnline = document.getElementById( 'online' );
 	socket.connect();
+	var blurb;
 	socket.on('message', function( obj ) {
 		if ( typeof obj != 'object' ) {
 			return;
 		}
 		if ( 'numOnline' in obj ) {
-			online.innerHTML = '&nbsp;' + obj.numOnline + ' users online.';
+			usersOnline.innerHTML = obj.numOnline + ( obj.numOnline == 1 ? ' user on this page' : ' users on this page' );
 		}
 		if ( 'tf' in obj ) {
 			var create = document.getElementById( 'create' );
@@ -20,9 +94,9 @@ window.onload = function(){
 					create.disabled = false;
 					create.onclick = function(){
 						socket.send( {action: 'join_match', steamid: prompt( 'Please paste your Steam Community URL here:' )} );
-						setTimeout( function(){
-							location.href = 'steam://connect/nightgunner5.is-a-geek.net:27015';
-						}, 1000 );
+						//setTimeout( function(){
+						//	location.href = 'steam://connect/nightgunner5.is-a-geek.net:27015';
+						//}, 1000 );
 					};
 					break;
 				default:
@@ -31,6 +105,12 @@ window.onload = function(){
 					create.onclick = function(){};
 					break;
 			}
+			if ( blurb ) {
+				blurb.style.display = 'none';
+			}
+			if ( blurb = document.getElementById( 'blurb-' + obj.tf ) ) {
+				blurb.style.display = 'block';
+			}
 		}
 		if ( 'joinserver' in obj ) {
 			location.href = 'steam://connect/' + obj.joinserver;
@@ -38,6 +118,13 @@ window.onload = function(){
 		if ( 'state' in obj ) {
 			var state = obj.state;
 			
+			var online = 0;
+			for ( var i = 0; i < state.players.length; i++ ) {
+				if ( state.players[i].online )
+					online++;
+			}
+			document.getElementById( 'player-count' ).innerHTML = ( online == 0 ? 'are no players' :
+					( online == 1 ? 'is one player' : ( 'are ' + online + ' players' ) ) );
 			if ( state.players.length ) {
 				document.getElementById( 'game' ).style.display = 'block';
 			} else {
@@ -62,4 +149,11 @@ window.onload = function(){
 	socket.on('reconnect', function(){ status.innerHTML = 'Reconnected.' });
 	socket.on('reconnecting', function( nextRetry ){ status.innerHTML = 'Lost connection. Retrying in ' + ( nextRetry / 1000 ) + ' seconds.'; });
 };
-</script></body></html>
+</script>
+
+				
+		<div id="footer">
+	    	<p>PubComp is proudly powered by <a href="http://wordpress.org">WordPress</a> and <a href="http://buddypress.org">BuddyPress</a></p>
+		</div><!-- #footer -->
+	</body>
+</html>
