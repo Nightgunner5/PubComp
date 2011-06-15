@@ -119,13 +119,15 @@ window.onload = function(){
 			var state = obj.state;
 			
 			var online = 0;
-			for ( var i = 0; i < state.players.length; i++ ) {
-				if ( state.players[i].online )
-					online++;
+			if ( 'players' in state ) {
+				for ( var i = 0; i < state.players.length; i++ ) {
+					if ( state.players[i].online )
+						online++;
+				}
 			}
 			document.getElementById( 'player-count' ).innerHTML = ( online == 0 ? 'are no players' :
 					( online == 1 ? 'is one player' : ( 'are ' + online + ' players' ) ) );
-			if ( state.players.length ) {
+			if ( online ) {
 				document.getElementById( 'game' ).style.display = 'block';
 			} else {
 				document.getElementById( 'game' ).style.display = 'none';

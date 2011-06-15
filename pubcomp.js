@@ -28,7 +28,7 @@ require('./logsocket').create( function( line ) {
 				.send( 'pubcomp_add_steamid ""' )
 				.send( 'sv_downloadurl "http://' + config.SERVERIP + ':27014/tf/"' )
 				.send( 'mp_tournament 1; mp_tournament_allow_non_admin_restart 0' )
-				.send( 'tf_bot_quota 12; tf_bot_quota_mode fill' );
+				.send( 'tf_bot_add 12; tf_bot_quota_mode fill' );
 		tf2state = 'almost';
 		sendTF2State( socket );
 	}
@@ -111,6 +111,7 @@ socket.on( 'connection', function( client ) {
 			case 'join_match':
 				if ( !rcon )
 					break;
+				console.log( this );
 				//client.broadcast({ 'joinserver': config.SERVERIP + ':27015' });
 				var path;
 				if ( /^STEAM_\d:\d:\d+$/.test( message.steamid ) ) {
@@ -135,7 +136,7 @@ socket.on( 'connection', function( client ) {
 								ID64 = new bignumber( ID64[1] );
 								var steamID = 'STEAM_0:' + ID64.mod( new bignumber( '2' ) ) + ':' + ( ID64.subtract( new bignumber( '76561197960265728' ) ).shiftRight( 1 ) );
 								rcon.send( 'pubcomp_add_steamid ' + steamID );
-								console.log( client.broadcast({ 'joinserver': config.SERVERIP + ':27015' }) );
+								client.broadcast({ 'joinserver': config.SERVERIP + ':27015' });
 							}
 						} );
 					} );
@@ -148,7 +149,9 @@ socket.on( 'connection', function( client ) {
 		socket.broadcast({ 'numOnline': Object.keys( socket.clients ).length });
 	});
 } );
-function filterLog( log ) {
+function filterLog( log, tf2state ) {
+	if ( tf2state == 'updating' || tf2state == 'starting' ) return {};
+	if ( tf2state == 'almost' ) return { mapName: log.mapName };
 	var filtered = JSON.parse( JSON.stringify( log ) );
 	filtered.events = filtered.events.slice(Math.max(0, filtered.events.length - 5));
 	return filtered;
@@ -157,6 +160,6 @@ setInterval( function() {
 	socket.broadcast( {
 		'numOnline': Object.keys( socket.clients ).length,
 		'tf': tf2state,
-		'state': filterLog( log.getLog() )
+		'state': filterLog( log.getLog(), tf2state )
 	} );
 }, 5000 );
