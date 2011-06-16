@@ -1,7 +1,9 @@
 var http = require( 'http' ),
 	io = require( 'socket.io'),
 	fs = require( 'fs' ),
-	spawn = require( 'child_process' ).spawn,
+	child_process = require( 'child_process' ),
+	spawn = child_process.spawn,
+	exec = child_process.exec,
 	dgram = require( 'dgram' ),
 	bignumber = require( 'bignumber' ).BigInteger,
 	logparser = require( 'tf2logparser' ).TF2LogParser,
@@ -32,7 +34,7 @@ require('./logsocket').create( function( line ) {
 		rcon = require('./rcon').create( 27015, '127.0.0.1' )
 				.password( tf2_rcon )
 				.send( 'pubcomp_add_steamid ""' )
-				.send( 'sv_downloadurl "http://' + config.SERVERIP + ':27014/tf/"' )
+				.send( 'sv_downloadurl "http://' + config.SITEURL + '/tf/"' )
 				.send( 'mp_tournament 1; mp_tournament_allow_non_admin_restart 0' )
 				.send( 'tf_bot_add 12; tf_bot_quota_mode fill' );
 		require( 'util' ).log( 'TF2 state change: ' + tf2state + ' -> almost' );
@@ -63,6 +65,12 @@ tf2.stdout.on( 'data', function( data ) {
 	} else {
 		updatebuffer = '';
 	}
+} );
+
+process.on( 'exit', function() {
+	try {
+		tf2.kill();
+	} catch ( ex ) {}
 } );
 
 //rconSend( 2, 'pubcomp_add_steamid STEAM_0:0:26649930' );
@@ -123,7 +131,7 @@ var server = http.createServer( function( req, res ) {
 		res.end();
 	}
 } );
-server.listen( 27013 );
+server.listen( config.SOCKETPORT );
 
 var socket = io.listen( server );
 socket.on( 'connection', function( client ) {
@@ -167,16 +175,59 @@ socket.on( 'connection', function( client ) {
 	});
 } );
 function filterLog( log, tf2state ) {
-	if ( tf2state == 'updating' || tf2state == 'starting' ) return {};
+	if ( tf2state == 'starting' ) return {};
 	if ( tf2state == 'almost' ) return { mapName: log.mapName };
 	var filtered = JSON.parse( JSON.stringify( log ) );
 	filtered.events = filtered.events.slice(Math.max(0, filtered.events.length - 5));
 	return filtered;
 }
+var current_update_file = null, prev_update_file = null, max_update_lag = 60, steam_pid = 0, file_lag = 0;
+setInterval( function getCurrentUpdateFile() {
+	if ( tf2state == 'updating' ) {
+		if ( !steam_pid ) {
+			exec( 'ps -C steam -o pid=', function( error, stdout, stderr ) {
+				steam_pid = parseInt( stdout.trim() );
+				if ( isNaN( steam_pid ) )
+					steam_pid = 0;
+				else
+					getCurrentUpdateFile();
+			} );
+			return;
+		}
+
+		exec( 'ls -l /proc/' + steam_pid + '/fd', function( error, stdout, stderr ) {
+			if ( error || !stdout || stdout.indexOf( '/tfds/' ) == -1 ) {
+				steam_pid = 0;
+				current_update_file = null;
+				return;
+			}
+			var filename = stdout.substr( stdout.indexOf( '/tfds/' ) + 6 );
+			if ( filename.indexOf( '\n' ) != -1 )
+				filename = filename.substr( 0, filename.indexOf( '\n' ) );
+			if ( filename == ' 0' ) {
+				filename = null;
+			}
+			current_update_file = filename;
+			if ( filename && prev_update_file == current_update_file ) {
+				file_lag++;
+			} else {
+				file_lag = 0;
+			}
+			prev_update_file = current_update_file;
+			if ( file_lag > max_update_lag ) {
+				require( 'util' ).log( 'Steam process seems to be hanging; stuck on ' + filename + ' for over 5 minutes. Killing update...' );
+				updatebuffer += 'PubComp: Steam process seems to be hanging; stuck on ' + filename + ' for over 5 minutes.\nPubComp: Killing update...\n';
+				exec( 'kill ' + steam_pid );
+				prev_update_file = null;
+				current_update_file = null;
+			}
+		} );
+	}
+}, 5000 );
 setInterval( function() {
 	socket.broadcast( {
 		'numOnline': Object.keys( socket.clients ).length,
 		'tf': tf2state,
-		'state': tf2state == 'updating' ? { update: updatebuffer } : filterLog( log.getLog(), tf2state )
+		'state': tf2state == 'updating' ? { update: updatebuffer, file: current_update_file, lag: file_lag * 5 } : filterLog( log.getLog(), tf2state )
 	} );
 }, 5000 );

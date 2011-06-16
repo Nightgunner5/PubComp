@@ -78,7 +78,7 @@
 <script>
 var socket;
 window.onload = function(){
-	socket = new io.Socket( null, {port: 27013, rememberTransport: true} ), status = document.getElementById( 'status' ), usersOnline = document.getElementById( 'online' );
+	socket = new io.Socket( null, { port: {SOCKETPORT}, rememberTransport: true } ), status = document.getElementById( 'status' );
 	socket.connect();
 	var blurb;
 	socket.on('message', function( obj ) {
@@ -86,7 +86,7 @@ window.onload = function(){
 			return;
 		}
 		if ( 'numOnline' in obj ) {
-			usersOnline.innerHTML = obj.numOnline + ( obj.numOnline == 1 ? ' user on this page' : ' users on this page' );
+			status.innerHTML = obj.numOnline + ( obj.numOnline == 1 ? ' user on this page' : ' users on this page' );
 		}
 		if ( 'tf' in obj ) {
 			var create = document.getElementById( 'create' );
@@ -121,6 +121,12 @@ window.onload = function(){
 			
 			if (  'update' in state ) {
 				document.getElementById( 'updatestatus' ).innerHTML = state.update.replace( /&/g, '&amp;' ).replace( /</g, '&lt;' );
+				if ( 'file' in state && state.file ) {
+					document.getElementById( 'updatestatus' ).innerHTML += '\n\nCurrently checking file: ' + state.file;
+					if ( state.lag > 5 ) {
+						document.getElementById( 'updatestatus' ).innerHTML += ' (' + state.lag + 's)';
+					}
+				}
 			}
 			
 			var online = 0;
@@ -149,11 +155,12 @@ window.onload = function(){
     players: []
   };*/
 		}
-		console.log( JSON.stringify( obj ) );
+		if ( window.console && console.log )
+			console.log( JSON.stringify( obj ) );
 	});
-	socket.on('connect', function(){ status.innerHTML = 'Connected.' });
+	socket.on('connect', function(){ status.innerHTML = '' });
 	socket.on('disconnect', function(){ status.innerHTML = 'Lost connection.' });
-	socket.on('reconnect', function(){ status.innerHTML = 'Reconnected.' });
+	socket.on('reconnect', function(){ status.innerHTML = '' });
 	socket.on('reconnecting', function( nextRetry ){ status.innerHTML = 'Lost connection. Retrying in ' + ( nextRetry / 1000 ) + ' seconds.'; });
 };
 </script>
