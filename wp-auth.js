@@ -71,8 +71,12 @@ WP_Auth.prototype.getUserMeta = function( id, key, callback ) {
 	} );
 };
 
-exports.create = function( wpurl, logged_in_key, logged_in_salt ) {
-	return new WP_Auth( wpurl, logged_in_key, logged_in_salt );
+exports.create = function( wpurl, logged_in_key, logged_in_salt,
+				mysql_host, mysql_user, mysql_pass, mysql_db,
+				wp_table_prefix ) {
+	return new WP_Auth( wpurl, logged_in_key, logged_in_salt,
+				mysql_host, mysql_user, mysql_pass, mysql_db,
+				wp_table_prefix );
 };
 
 function Invalid_Auth() {}
