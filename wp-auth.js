@@ -48,7 +48,10 @@ WP_Auth.prototype.checkAuth = function( req ) {
 	if ( !data )
 		return new Invalid_Auth();
 
-	return new Valid_Auth(data, this);
+	if ( parseInt( data[1] ) < new Date / 1000 )
+		return new Invalid_Auth();
+
+	return new Valid_Auth( data, this );
 };
 
 WP_Auth.prototype.getUserMeta = function( id, key, callback ) {
@@ -61,7 +64,7 @@ WP_Auth.prototype.getUserMeta = function( id, key, callback ) {
 	this.db.query( 'select meta_value from ' + this.table_prefix + 'usermeta where meta_key = \'' + key.replace( /(\'|\\)/g, '\\$1' ) + '\' and user_id = ' + parseInt( id ) ).on( 'row', function( data ) {
 		if ( !( id in self.meta_cache ) )
 			self.meta_cache[id] = {};
-		self.meta_cache[id][key] = data[0];
+		self.meta_cache[id][key] = data.meta_value;
 	} ).on( 'end', function() {
 		if ( !( id in self.meta_cache ) )
 			self.meta_cache[id] = {};
@@ -94,31 +97,31 @@ function Valid_Auth( data, auth ) {
 	var self = this, user_login = data[0], expiration = data[1], hash = data[2];
 
 	function parse( pass_frag, id ) {
-		process.nextTick(function() {
-			var hmac1 = crypto.createHmac( 'md5', this.salt );
-			hmac1.update( user_login + pass_frag + '|' + expiration );
-			var hmac2 = crypto.createHmac( 'md5', hmac1.digest( 'hex' ) );
-			hmac2.update( user_login + '|' + expiration );
-			if ( hash == hmac2.digest( 'hex' ) ) {
-				self.emit( 'auth', true, id );
-			} else {
-				self.emit( 'auth', false, 0 );
-			}
-		});
+		var hmac1 = crypto.createHmac( 'md5', auth.salt );
+		hmac1.update( user_login + pass_frag + '|' + expiration );
+		var hmac2 = crypto.createHmac( 'md5', hmac1.digest( 'hex' ) );
+		hmac2.update( user_login + '|' + expiration );
+		if ( hash == hmac2.digest( 'hex' ) ) {
+			self.emit( 'auth', true, id );
+		} else {
+			self.emit( 'auth', false, 0 );
+		}
 	}
 
 	if ( user_login in auth.known_hashes )
-		parse( auth.known_hashes[user_login].frag, auth.known_hashes[user_login].id );
+		process.nextTick(function() {
+			parse( auth.known_hashes[user_login].frag, auth.known_hashes[user_login].id );
+		} );
 
 	var found = false;
 	auth.db.query( 'select ID, user_pass from ' + auth.table_prefix + 'users where user_login = \'' + user_login.replace( /(\'|\\)/g, '\\$1' ) + '\'' ).on( 'row', function( data ) {
 		found = true;
-		auth.known_hashes[user_login] = {frag: data[1].substr( 8, 4 ), id: data[0]};
+		auth.known_hashes[user_login] = {frag: data.user_pass.substr( 8, 4 ), id: data.ID};
 	} ).on( 'end', function() {
 		if ( !found ) {
 			auth.known_hashes[user_login] = {frag: '__fail__', id: 0};
-			parse( '__fail__', 0 );
 		}
+		parse( auth.known_hashes[user_login].frag, auth.known_hashes[user_login].id );
 	} );
 }
 
