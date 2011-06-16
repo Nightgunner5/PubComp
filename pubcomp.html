@@ -90,13 +90,12 @@ window.onload = function(){
 			var create = document.getElementById( 'create' );
 			switch ( obj.tf ) {
 				case 'online':
-					create.innerHTML = 'Join match';
+					create.innerHTML = {WPCOOKIE}.length ? 'Join match' : 'Log in to join this match';
 					create.disabled = false;
-					create.onclick = function(){
-						socket.send( {action: 'join_match', steamid: prompt( 'Please paste your Steam Community URL here:' )} );
-						//setTimeout( function(){
-						//	location.href = 'steam://connect/nightgunner5.is-a-geek.net:27015';
-						//}, 1000 );
+					create.onclick = {WPCOOKIE}.length ? function() {
+						socket.send( {action: 'join_match', cookie: {WPCOOKIE}} );
+					} : function() {
+						location.href = '{WPLOGIN}';
 					};
 					break;
 				default:

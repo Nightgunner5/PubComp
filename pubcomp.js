@@ -11,7 +11,11 @@ var http = require( 'http' ),
 	rcon = null,
 	tf2state = 'unknown',
 	map = 'cp_granary',
-	config = require( './config' );
+	config = require( './config' ),
+	wp_auth = require( 'wordpress-auth' ).create(
+				config.wpauth.wpurl, config.wpauth.logged_in_key, config.wpauth.logged_in_salt,
+				config.wpauth.mysql_host, config.wpauth.mysql_user, config.wpauth.mysql_pass,
+				config.wpauth.mysql_db, config.wpauth.wp_table_prefix );
 
 process.chdir( __dirname );
 
@@ -57,8 +61,20 @@ var server = http.createServer( function( req, res ) {
 	if ( req.url == '/pubcomp' ) {
 		fs.readFile( 'pubcomp.html', function( err, data ) {
 			if ( err ) { res.writeHead( 404 ); res.end(); return; }
-			res.writeHead( 200, {'Content-Type': 'text/html; charset=utf-8'} );
-			res.write( data.toString( 'utf8' ).replace( /\{([A-Z]+?)\}/g, function( a, b ) {
+			res.writeHead( 200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' } );
+			res.write( data.toString( 'utf8' ).replace( /\{WPCOOKIE\}/g, function() {
+				var data = [];
+				if ( req.headers.cookie )
+					req.headers.cookie.split( ';' ).forEach( function( cookie ) {
+						if ( cookie.split( '=' )[0].trim() == wp_auth.cookiename )
+							data = cookie.split( '=' )[1].trim().split( '%7C' );
+					} );
+				if ( data.length == 3 )
+					return JSON.stringify( data.join( '%7C' ) );
+				return '""';
+			} ).replace( /\{([A-Z]+?)\}/g, function( a, b ) {
+				if ( b == 'WPLOGIN' )
+					return config.wpauth.wpurl + '/wp-login.php?redirect_to=' + escape( config.wpauth.wpurl + '/pubcomp' );
 				if ( b in config )
 					return config[b];
 				return a;
@@ -111,9 +127,8 @@ socket.on( 'connection', function( client ) {
 			case 'join_match':
 				if ( !rcon )
 					break;
-				console.log( this );
 				//client.broadcast({ 'joinserver': config.SERVERIP + ':27015' });
-				var path;
+				/*var path;
 				if ( /^STEAM_\d:\d:\d+$/.test( message.steamid ) ) {
 					rcon.send( 'pubcomp_add_steamid ' + message.steamid );
 					setTimeout(function(){
@@ -140,7 +155,7 @@ socket.on( 'connection', function( client ) {
 							}
 						} );
 					} );
-				}
+				}*/
 				break;
 		}
 	});
