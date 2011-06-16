@@ -32,6 +32,7 @@ function WP_Auth( wpurl, logged_in_key, logged_in_salt,
 	this.table_prefix = wp_table_prefix;
 
 	this.known_hashes = {};
+	this.meta_cache = {};
 }
 
 WP_Auth.prototype.checkAuth = function( req ) {
@@ -48,6 +49,26 @@ WP_Auth.prototype.checkAuth = function( req ) {
 		return new Invalid_Auth();
 
 	return new Valid_Auth(data, this);
+};
+
+WP_Auth.prototype.getUserMeta = function( id, key, callback ) {
+	if ( id in this.meta_cache && key in this.meta_cache[id] ) {
+		callback( this.meta_cache[id][key] );
+		return;
+	}
+
+	var self = this;
+	this.db.query( 'select meta_value from ' + this.table_prefix + 'usermeta where meta_key = \'' + key.replace( /(\'|\\)/g, '\\$1' ) + '\' and user_id = ' + parseInt( id ) ).on( 'row', function( data ) {
+		if ( !( id in self.meta_cache ) )
+			self.meta_cache[id] = {};
+		self.meta_cache[id][key] = data[0];
+	} ).on( 'end', function() {
+		if ( !( id in self.meta_cache ) )
+			self.meta_cache[id] = {};
+		if ( !( key in self.meta_cache[id] ) )
+			self.meta_cache[id][key] = null;
+		callback( self.meta_cache[id][key] );
+	} );
 };
 
 exports.create = function( wpurl, logged_in_key, logged_in_salt ) {
