@@ -56,7 +56,9 @@
 				<div class="post">
 					<div class="entry">
 <button id="create" disabled="disabled">Getting TF2 state...</button>
-<div id="blurb-updating">The TF2 server is currently checking for updates. It might be a while before it's ready for use.</div>
+<div id="blurb-updating">The TF2 server is currently checking for updates. It might be a while before it's ready for use.<br/>
+<br/>Update status:
+<pre id="updatestatus"></pre></div>
 <div id="blurb-starting">The TF2 server has finished checking for updates and will now start. It will only be a minute or two before the server is ready.</div>
 <div id="blurb-almost">The TF2 server is almost ready. This stage in startup is the final plugin initialization. It should be ready in under a minute.</div>
 <div id="blurb-online">The TF2 server is ready for a match. There <span id="player-count">are no players</span> on it right now.</div>
@@ -116,6 +118,10 @@ window.onload = function(){
 		}
 		if ( 'state' in obj ) {
 			var state = obj.state;
+			
+			if (  'update' in state ) {
+				document.getElementById( 'updatestatus' ).innerHTML = state.update.replace( /&/g, '&amp;' ).replace( /</g, '&lt;' );
+			}
 			
 			var online = 0;
 			if ( 'players' in state ) {

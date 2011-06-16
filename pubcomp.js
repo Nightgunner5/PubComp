@@ -15,7 +15,8 @@ var http = require( 'http' ),
 	wp_auth = require( 'wordpress-auth' ).create(
 				config.wpauth.wpurl, config.wpauth.logged_in_key, config.wpauth.logged_in_salt,
 				config.wpauth.mysql_host, config.wpauth.mysql_user, config.wpauth.mysql_pass,
-				config.wpauth.mysql_db, config.wpauth.wp_table_prefix );
+				config.wpauth.mysql_db, config.wpauth.wp_table_prefix ),
+	updatebuffer = '';
 
 process.chdir( __dirname );
 
@@ -24,6 +25,7 @@ require('./logsocket').create( function( line ) {
 	filelog.write( line + '\n', 'utf8' );
 	log.parseLine( line );
 	if ( tf2state == 'updating' || tf2state == 'unknown' ) {
+		require( 'util' ).log( 'TF2 state change: ' + tf2state + ' -> starting' );
 		tf2state = 'starting';
 	}
 	if ( line.indexOf( 'Started map' ) != -1 && !rcon ) {
@@ -33,10 +35,12 @@ require('./logsocket').create( function( line ) {
 				.send( 'sv_downloadurl "http://' + config.SERVERIP + ':27014/tf/"' )
 				.send( 'mp_tournament 1; mp_tournament_allow_non_admin_restart 0' )
 				.send( 'tf_bot_add 12; tf_bot_quota_mode fill' );
+		require( 'util' ).log( 'TF2 state change: ' + tf2state + ' -> almost' );
 		tf2state = 'almost';
 		sendTF2State( socket );
 	}
 	if ( line.indexOf( 'rcon from "' ) != -1 && tf2state != 'online' ) {
+		require( 'util' ).log( 'TF2 state change: ' + tf2state + ' -> online' );
 		tf2state = 'online';
 		sendTF2State( socket );
 	}
@@ -49,7 +53,17 @@ for ( var i = 0; i < 64; i++ ) {
 }
 
 tf2 = spawn( '../tfds/orangebox/srcds_run', [process.argv.indexOf( '--noupdate' ) == -1 ? '-autoupdate' : '', '-steambin', '../../steam', '-maxplayers', '20', '+tv_enable', '1', '+map', map, '+rcon_password', tf2_rcon, '+sv_logfile', '0', '+log_verbose_enable', '1', '+log_verbose_interval', '1', '+log', 'on', '+logaddress_add', '127.0.0.2:57015', '+sv_allowdownload', '1', '+sv_allowupload', '1', '+hostname', 'PubComp ' + config.SERVERNAME] );
+require( 'util' ).log( 'TF2 state change: ' + tf2state + ' -> updating' );
 tf2state = 'updating';
+tf2.stdout.setEncoding( 'utf8' );
+tf2.stdout.on( 'data', function( data ) {
+	if ( tf2state == 'updating' ) {
+		updatebuffer += data;
+		require( 'util' ).log( 'TF2 update status: ' + data.trim() );
+	} else {
+		updatebuffer = '';
+	}
+} );
 
 //rconSend( 2, 'pubcomp_add_steamid STEAM_0:0:26649930' );
 
@@ -127,35 +141,23 @@ socket.on( 'connection', function( client ) {
 			case 'join_match':
 				if ( !rcon )
 					break;
-				//client.broadcast({ 'joinserver': config.SERVERIP + ':27015' });
-				/*var path;
-				if ( /^STEAM_\d:\d:\d+$/.test( message.steamid ) ) {
-					rcon.send( 'pubcomp_add_steamid ' + message.steamid );
-					setTimeout(function(){
-						client.broadcast({ 'joinserver': config.SERVERIP + ':27015' });
-					}, 100 );
-				} else if ( ( path = /^http:\/\/(?:www\.)?steamcommunity\.com(\/(profile|id)\/[^\/]+)$/.exec( message.steamid ) ) && path.length ) {
-					path = path[1];
-					http.get( { host: 'steamcommunity.com', port: 80, path: path + '?xml=1' }, function( res ) {
-						// Once we find the person's steam ID, don't add all their friends to the permission list as well.
-						var found = false;
-						res.setEncoding( 'utf8' );
-						res.on( 'data', function( chunk ) {
-							// Wait for it...
-							if ( found )
-								return;
-							// I typed that without noticing what I had typed.
-							found = true;
-							var ID64 = /<steamID64>(\d+)<\/steamID64>/.exec( chunk );
-							if ( ID64 && ID64.length ) {
-								ID64 = new bignumber( ID64[1] );
-								var steamID = 'STEAM_0:' + ID64.mod( new bignumber( '2' ) ) + ':' + ( ID64.subtract( new bignumber( '76561197960265728' ) ).shiftRight( 1 ) );
-								rcon.send( 'pubcomp_add_steamid ' + steamID );
+				wp_auth.checkAuth( { headers: { cookie: message.cookie } } ).on( 'auth', function( auth_is_valid, user_id ) {
+					if ( !auth_is_valid ) {
+						client.broadcast({ message: 'Please log out and in. Your session has expired.' });
+						return;
+					}
+
+					wp_auth.getUserMeta( user_id, 'pubcomp_steamid', function( data ) {
+						if ( typeof data == 'string' ) {
+							if ( /^STEAM_\d:\d:\d+$/.test( data ) ) {
+								rcon.send( 'pubcomp_add_steamid ' + data );
 								client.broadcast({ 'joinserver': config.SERVERIP + ':27015' });
+								return;
 							}
-						} );
+						}
+						client.broadcast({ message: 'Please connect your Steam ID to your PubComp account via your profile settings.' });
 					} );
-				}*/
+				} );
 				break;
 		}
 	});
@@ -175,6 +177,6 @@ setInterval( function() {
 	socket.broadcast( {
 		'numOnline': Object.keys( socket.clients ).length,
 		'tf': tf2state,
-		'state': filterLog( log.getLog(), tf2state )
+		'state': tf2state == 'updating' ? { update: updatebuffer } : filterLog( log.getLog(), tf2state )
 	} );
 }, 5000 );
