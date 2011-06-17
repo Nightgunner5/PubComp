@@ -12,6 +12,8 @@ add_action( 'bp_before_account_details_fields', 'pubcomp_before_account_details'
 add_action( 'bp_after_account_details_fields', 'pubcomp_clear_buffer' );
 add_action( 'bp_before_signup_profile_fields', 'pubcomp_before_signup_profile' );
 add_action( 'bp_after_signup_profile_fields', 'pubcomp_clear_buffer' );
+add_action( 'bp_before_sidebar_login_form', 'pubcomp_before_sidebar_login' );
+add_action( 'bp_after_sidebar_login_form', 'pubcomp_clear_buffer' );
 
 function pubcomp_get_openid() {
 	static $openid = null;
@@ -69,7 +71,7 @@ function pubcomp_init() {
 			$player = pubcomp_fetch_player( $openid->identity );
 			$user = get_user_by( 'login', 'steam_' . $player['steamid'] );
 			if ( $user && !is_wp_error( $user ) ) {
-				update_user_meta( $user->ID, 'display_name', $player['personaname'] );
+				wp_insert_user( array( 'ID' => $user->ID, 'display_name' => $player['personaname'] ) );
 				wp_set_auth_cookie( $user->ID, true );
 				if ( empty( $_GET['redirect_to'] ) )
 					$_GET['redirect_to'] = get_home_url();
@@ -109,5 +111,6 @@ function pubcomp_before_account_details() {
 }
 
 function pubcomp_before_signup_profile() { ob_start(); }
+function pubcomp_before_sidebar_login_form() { ob_start(); }
 
 function pubcomp_clear_buffer() { ob_end_clean(); }
