@@ -111,6 +111,6 @@ function pubcomp_before_account_details() {
 }
 
 function pubcomp_before_signup_profile() { ob_start(); }
-function pubcomp_before_sidebar_login_form() { ob_start(); }
+function pubcomp_before_sidebar_login() { ob_start(); }
 
 function pubcomp_clear_buffer() { ob_end_clean(); }
