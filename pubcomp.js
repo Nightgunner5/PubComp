@@ -151,19 +151,19 @@ socket.on( 'connection', function( client ) {
 					break;
 				wp_auth.checkAuth( { headers: { cookie: message.cookie } } ).on( 'auth', function( auth_is_valid, user_id ) {
 					if ( !auth_is_valid ) {
-						client.broadcast({ message: 'Please log out and in. Your session has expired.' });
+						client.broadcast({ message: 'Please log in again. Your session has expired.' });
 						return;
 					}
 
 					wp_auth.getUserMeta( user_id, 'pubcomp_steamid', function( data ) {
 						if ( typeof data == 'string' ) {
-							if ( /^STEAM_\d:\d:\d+$/.test( data ) ) {
-								rcon.send( 'pubcomp_add_steamid ' + data );
-								client.broadcast({ 'joinserver': config.SERVERIP + ':27015' });
-								return;
-							}
+							var id64 = new bignumber( data );
+							data = 'STEAM_0:' + id64.mod( 2 ).toString() + ':' + id64.minus( new bignumber( '76561197960265728' ) ).shiftRight( 1 ).toString();
+							rcon.send( 'pubcomp_add_steamid ' + data );
+							client.broadcast({ 'joinserver': config.SERVERIP + ':27015' });
+							return;
 						}
-						client.broadcast({ message: 'Please connect your Steam ID to your PubComp account via your profile settings.' });
+						//client.broadcast({ message: 'Please connect your Steam ID to your PubComp account via your profile settings.' });
 					} );
 				} );
 				break;
@@ -181,7 +181,7 @@ function filterLog( log, tf2state ) {
 	filtered.events = filtered.events.slice(Math.max(0, filtered.events.length - 5));
 	return filtered;
 }
-var current_update_file = null, prev_update_file = null, max_update_lag = 60, steam_pid = 0, file_lag = 0;
+var current_update_file = null, prev_update_file = null, max_update_lag = 360, steam_pid = 0, file_lag = 0;
 setInterval( function getCurrentUpdateFile() {
 	if ( tf2state == 'updating' ) {
 		if ( !steam_pid ) {
@@ -215,8 +215,8 @@ setInterval( function getCurrentUpdateFile() {
 			}
 			prev_update_file = current_update_file;
 			if ( file_lag > max_update_lag ) {
-				require( 'util' ).log( 'Steam process seems to be hanging; stuck on ' + filename + ' for over 5 minutes. Killing update...' );
-				updatebuffer += 'PubComp: Steam process seems to be hanging; stuck on ' + filename + ' for over 5 minutes.\nPubComp: Killing update...\n';
+				require( 'util' ).log( 'Steam process seems to be hanging; stuck on ' + filename + ' for over 30 minutes. Killing update...' );
+				updatebuffer += 'PubComp: Steam process seems to be hanging; stuck on ' + filename + ' for over 30 minutes.\nPubComp: Killing update...\n';
 				exec( 'kill ' + steam_pid );
 				prev_update_file = null;
 				current_update_file = null;
