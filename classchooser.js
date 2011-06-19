@@ -67,6 +67,7 @@ exports.chooseClasses = function( players, mode ) {
 		player.games = 0;
 		for ( var cls in player.playtime )
 			player.games += player.playtime[cls];
+		return player;
 	} );
 
 	for ( var cls in needed ) {
@@ -79,7 +80,7 @@ exports.chooseClasses = function( players, mode ) {
 		return b.games - a.games;
 	} ).forEach( function( player ) {
 		if ( player.games < exports.newbie ) {
-			if ( need[player.choices[0]] && need[player.choices[0]] < have[player.choices[0]] ) {
+			if ( needed[player.choices[0]] && needed[player.choices[0]] < have[player.choices[0]] ) {
 				given[player.player] = player.choices[0];
 				have[player.choices[0]]++;
 				return;
@@ -140,15 +141,37 @@ exports.chooseClasses = function( players, mode ) {
 	var playerScores = [];
 	players.forEach( function( player ) {
 		var score = 0;
-		for ( var cls in player.playTime ) {
-			totalGames += player.playTime[cls];
+		for ( var role in leastWantedRoles ) {
+			score += customDiv( Math.min( customDiv( needed[role], totalRoles ), customDiv( player.playtime[role], player.games ) ), leastWantedRoles[role] );
 		}
-		leastWantedRoles.forEach( function( role ) {
-			score += customDiv( Math.min( customDiv( needed[role.cls], totalRoles ), customDiv( player.playTime[role.cls], player.games ) ), leastWantedRoles[role.cls] );
-		} );
-		playerScores.push( { player: player.player, score: score } );
+		playerScores.push( { player: player, score: score } );
 	} );
 
-	console.log( { have: have, needed: needed, given: given } );
-	console.log( playerScores );
+	playerScores.sort( function( a, b ){
+		return a.score - b.score;
+	} ).forEach( function( score ) {
+		var player = score.player;
+		for ( var i = 0; i < player.choices.length; i++ ) {
+			if ( need[player.choices[i]] && need[player.choices[i]] < have[player.choices[i]] ) {
+				given[player.player] = player.choices[i];
+				have[player.choices[i]]++;
+				return;
+			}
+		}
+	} );
+
+	// Everyone who hasn't been given a role gets one that is left over.
+	Array.prototype.shuffle.call( players ).forEach( function( player ) {
+		if ( player.player in given )
+			return;
+		for ( var role in needed ) {
+			if ( needed[role] > have[role] ) {
+				given[player.player] = role;
+				have[role]++;
+				return;
+			}
+		}
+	} );
+
+	return given;
 };
