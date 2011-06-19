@@ -1,4 +1,8 @@
 #include <sourcemod>
+#include <string>
+
+#include "config.inc"
+#include "version.inc"
 
 /* Implementation notes:
 
@@ -10,7 +14,7 @@ public Plugin:myinfo = {
 	name = "PubComp",
 	author = "The PubComp Team",
 	description = "",
-	version = "0.1-A",
+	version = PLUGIN_VERSION,
 	url = "http://pubcomp.com/"
 };
 
