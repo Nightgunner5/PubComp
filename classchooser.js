@@ -83,6 +83,7 @@ exports.chooseClasses = function( players, mode ) {
 			if ( needed[player.choices[0]] && needed[player.choices[0]] < have[player.choices[0]] ) {
 				given[player.player] = player.choices[0];
 				have[player.choices[0]]++;
+				//console.log( '(1) Giving player %s role %s', player.player, given[player.player] );
 				return;
 			}
 		}
@@ -105,6 +106,7 @@ exports.chooseClasses = function( players, mode ) {
 				if ( !( player.player in given ) && player.choices[0] == cls ) {
 					have[cls]++;
 					given[player.player] = cls;
+					//console.log( '(2) Giving player %s role %s', player.player, given[player.player] );
 				}
 			} );
 		}
@@ -119,6 +121,7 @@ exports.chooseClasses = function( players, mode ) {
 				if ( needed[player.choices[i]] && needed[player.choices[i]] < have[player.choices[i]] ) {
 					given[player.player] = player.choices[i];
 					have[player.choices[i]]++;
+					//console.log( '(3) Giving player %s role %s', player.player, given[player.player] );
 					return;
 				}
 			}
@@ -152,9 +155,10 @@ exports.chooseClasses = function( players, mode ) {
 	} ).forEach( function( score ) {
 		var player = score.player;
 		for ( var i = 0; i < player.choices.length; i++ ) {
-			if ( needed[player.choices[i]] && needed[player.choices[i]] < have[player.choices[i]] ) {
+			if ( needed[player.choices[i]] && needed[player.choices[i]] > have[player.choices[i]] ) {
 				given[player.player] = player.choices[i];
 				have[player.choices[i]]++;
+				//console.log( '(4) Giving player %s role %s', player.player, given[player.player] );
 				return;
 			}
 		}
@@ -168,6 +172,7 @@ exports.chooseClasses = function( players, mode ) {
 			if ( needed[role] > have[role] ) {
 				given[player.player] = role;
 				have[role]++;
+				//console.log( '(5) Giving player %s role %s', player.player, given[player.player] );
 				return;
 			}
 		}
