@@ -116,7 +116,7 @@ exports.chooseClasses = function( players, mode ) {
 	} ).forEach( function( player ) {
 		if ( player.games < exports.newbie ) {
 			for ( var i = 0; i < player.choices.length; i++ ) {
-				if ( need[player.choices[i]] && need[player.choices[i]] < have[player.choices[i]] ) {
+				if ( needed[player.choices[i]] && needed[player.choices[i]] < have[player.choices[i]] ) {
 					given[player.player] = player.choices[i];
 					have[player.choices[i]]++;
 					return;
@@ -152,7 +152,7 @@ exports.chooseClasses = function( players, mode ) {
 	} ).forEach( function( score ) {
 		var player = score.player;
 		for ( var i = 0; i < player.choices.length; i++ ) {
-			if ( need[player.choices[i]] && need[player.choices[i]] < have[player.choices[i]] ) {
+			if ( needed[player.choices[i]] && needed[player.choices[i]] < have[player.choices[i]] ) {
 				given[player.player] = player.choices[i];
 				have[player.choices[i]]++;
 				return;
