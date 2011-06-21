@@ -1,0 +1,2 @@
+#define MAX_COMMANDS 64
+#define MAX_COMMAND_LENGTH 256
