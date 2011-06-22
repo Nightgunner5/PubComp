@@ -171,14 +171,14 @@ public Action:CommandSetWarmupMod(client, args) {
 	decl String:modeName[20];
 	GetCmdArgString( modeName, sizeof( modeName ) );
 
-        activeWarmupMode = 0;
+        activeWarmupMode = -1;
         for (new i = 0; i < NUM_WARMUP_MODES + 1; i++) {
                 if (strcmp(modeName, warmupModes[i]) == 0) {
                         activeWarmupMode = i;
                 }
                 ServerCommand(warmupActivationCommands[i][1]);
         }
-        if (activeWarmupMode == 0) {
+        if (activeWarmupMode == -1) {
                 LogMessage("Could not find warmup mode \"%s\".", modeName);
                 return Plugin_Stop;
         }
