@@ -4,12 +4,6 @@
 #include "config.inc"
 #include "version.inc"
 
-/* Implementation notes:
-
-* pubcomp_add_steamid RCON command (self-explanatory)
-* Steam IDs are valid for 5 minutes or until the player joins the server. After that, they must be re-allowed by the RCON command above
-
-*/
 public Plugin:myinfo = {
 	name = "PubComp",
 	author = "The PubComp Team",
@@ -48,7 +42,7 @@ bool:findSteamID( const String:id[] ) {
 }
 
 public Action:CommandAddSteamID( client, args ) {
-        if ( client != 0 ) {
+	if ( client != 0 ) {
 		LogMessage( "Client %d is not permitted to add users to the whitelist.", client );
 		return Plugin_Stop;
 	}
@@ -115,38 +109,43 @@ public OnClientPutInServer( client ) {
 // effect when the actual match begins.
 
 // Wipe out all previously added commands.
-public Action:CommandResetGameCommands(client, args) {
-        if ( client != 0 ) {
-                LogMessage( "Client %d is not permitted to change PubComp game settings.", client );
+public Action:CommandResetGameCommands( client, args ) {
+	if ( client != 0 ) {
+		LogMessage( "Client %d is not permitted to change PubComp game settings.", client );
 		return Plugin_Stop;
 	}
-        for (new i = 0; i < commandCount; i++) {
-                gameCommands[i][0] = 0;
-        }
-        commandCount = 0;
-        return Plugin_Handled;
+	for ( new i = 0; i < commandCount; i++ ) {
+		gameCommands[i][0] = 0;
+	}
+	commandCount = 0;
+	return Plugin_Handled;
 }
 
 // Add a command to be executed when the match begins.
-public Action:CommandAddGameCommand(client, args) {
-        if ( client != 0 ) {
-                LogMessage( "Client %d is not permitted to change PubComp game settings.", client );
+public Action:CommandAddGameCommand( client, args ) {
+	if ( client != 0 ) {
+		LogMessage( "Client %d is not permitted to change PubComp game settings.", client );
 		return Plugin_Stop;
 	}
 
 	decl String:command[MAX_COMMAND_LENGTH];
-	GetCmdArgString(command, sizeof(command));
+	GetCmdArgString( command, sizeof( command ) );
 
-        strcopy(gameCommands[commandCount], MAX_COMMAND_LENGTH, command);
-        commandCount++;
-        return Plugin_Handled;
+	if ( commandCount + 1 == MAX_COMMANDS ) {
+		LogMessage( "Failed to add command \"%s\" to buffer; Command list is full.", command );
+		return Plugin_Stop;
+	}
+
+	strcopy( gameCommands[commandCount], MAX_COMMAND_LENGTH, command );
+	commandCount++;
+	return Plugin_Handled;
 }
 
 // Internal function that will execute the commands when the match begins.
 public ExecuteGameCommands() {
-        for (new i = 0; i < commandCount; i++) {
-                ServerCommand(gameCommands[i]);
-        }
+	for ( new i = 0; i < commandCount; i++ ) {
+		ServerCommand(gameCommands[i]);
+	}
 }
 
 // These functions and globals are for setting, activating and
@@ -158,14 +157,14 @@ public ExecuteGameCommands() {
 new String:warmupModes[NUM_WARMUP_MODES + 1][16] = {"NONE", "SOAP", "MGE"};
 new activeWarmupMode;
 new String:warmupActivationCommands[NUM_WARMUP_MODES + 1][2][MAX_COMMAND_LENGTH] = {
-        {"", ""},
-        {"sm plugins load soap_tf2dm", "sm plugins unload soap_tf2dm"},
-        {"sm plugins load mgemod", "sm plugins unload mgemod"}
+	{"", ""},
+	{"sm plugins load soap_tf2dm", "sm plugins unload soap_tf2dm"},
+	{"sm plugins load mgemod", "sm plugins unload mgemod"}
 };
 
-public Action:CommandSetWarmupMod(client, args) {
-        if ( client != 0 ) {
-                LogMessage( "Client %d is not permitted to change the warmup mod.", client );
+public Action:CommandSetWarmupMod( client, args ) {
+	if ( client != 0 ) {
+		LogMessage( "Client %d is not permitted to change the warmup mod.", client );
 		return Plugin_Stop;
 	}
 	decl String:modeName[20];
