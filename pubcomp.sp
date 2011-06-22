@@ -153,6 +153,8 @@ public ExecuteGameCommands() {
 // deactivating the desired pre-game/pause warmup mode.
 
 #define NUM_WARMUP_MODES 2
+#define ENABLE 0
+#define DISABLE 1
 new String:warmupModes[NUM_WARMUP_MODES + 1][16] = {"NONE", "SOAP", "MGE"};
 new activeWarmupMode;
 new String:warmupActivationCommands[NUM_WARMUP_MODES + 1][2][MAX_COMMAND_LENGTH] = {
