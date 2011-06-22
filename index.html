@@ -1,0 +1,108 @@
+<!DOCTYPE html><html><head>
+	<title>PubComp: Start a match</title>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
+	<script>//<![CDATA[
+$( function(){
+	var classes = ['scout', 'soldier', 'pyro', 'demoman', 'heavy', 'engineer', 'medic', 'sniper', 'spy'];
+	function addClass( selectedClass, min, max ) {
+		var id = $( '.class:last' ).attr( 'id' );
+		if ( !id )
+			id = 'class-0';
+		else
+			id = 'class-' + ( +id.substr( 6 ) + 1 );
+		return $( '<div>' ).hide().addClass( 'class' ).appendTo( $( '#classes' ) )
+			.append( $( '<label>' ).text( 'Class' ).attr( 'for', id + '-class' ) )
+			.append( ' ' )
+			.append( $( '<button>' ).addClass( 'class-rules' ).text( 'remove' ).click( function() {
+				$( this ).parent().slideUp( function() {
+					$( this ).remove();
+				} );
+				return false;
+			} ) )
+			.append( '<br>' )
+			.append( $( '<select>' ).addClass( 'class-rules' ).attr( 'id', id + '-class' ).attr( 'name', 'class_class[]' ).append( $( classes.map( function( cls ) {
+				var option = $( '<option>' ).attr( 'id', id + '-class-' + cls ).val( cls ).text( cls.replace( /^./, String.toUpperCase ) );
+				if ( selectedClass == cls )
+					option.attr( 'selected', 'selected' );
+				return option[0];
+			} ) ) ) )
+			.append( '<br>' )
+			.append( $( '<label>' ).text( 'Minimum' ).attr( 'for', id + '-min' ) )
+			.append( '<br>' )
+			.append( $( '<input>' ).addClass( 'class-rules' ).attr( 'id', id + '-min' ).prop( 'type', 'number' ).attr( 'name', 'class_min[]' ).val( min || 1 ) )
+			.append( '<br>' )
+			.append( $( '<label>' ).text( 'Maximum' ).attr( 'for', id + '-max' ) )
+			.append( '<br>' )
+			.append( $( '<input>' ).addClass( 'class-rules' ).attr( 'id', id + '-max' ).prop( 'type', 'number' ).attr( 'name', 'class_max[]' ).val( max || 1 ) )
+			.append( '<br><br>' )
+			.slideDown();
+	}
+	$( '#preset' ).change( function(){
+		switch ( $( this ).val() ) {
+			case '':
+				$( '.class-rules, .item-rules' ).removeProp( 'disabled' );
+				break;
+			case 'highlander':
+				$( '.class' ).slideUp( function(){ $( this ).remove(); } );
+				addClass( 'scout' );
+				addClass( 'soldier' );
+				addClass( 'pyro' );
+				addClass( 'demoman' );
+				addClass( 'heavy' );
+				addClass( 'engineer' );
+				addClass( 'medic' );
+				addClass( 'sniper' );
+				addClass( 'spy' );
+				$( '.class-rules, .item-rules' ).prop( 'disabled', true );
+				break;
+			case '6v6':
+				$( '.class' ).slideUp( function(){ $( this ).remove(); } );
+				addClass( 'scout', 2, 2 );
+				addClass( 'soldier', 2, 2 );
+				addClass( 'demoman' );
+				addClass( 'medic' );
+				$( '.class-rules, .item-rules' ).prop( 'disabled', true );
+				break;
+			case 'funmon':
+				$( '.class' ).slideUp( function(){ $( this ).remove(); } );
+				addClass( 'scout', 4, 4 );
+				addClass( 'medic', 2, 2 );
+				$( '.class-rules, .item-rules' ).prop( 'disabled', true );
+				break;
+		}
+	} );
+	$( '#add-class' ).click( function(){
+		addClass();
+	} );
+} );
+	//]]></script>
+</head><body>
+<label for="mode">Allowed game types</label><br/>
+<select multiple name="mode[]" id="mode">
+	<option value="cp" selected>Control Points</option>
+	<option value="ctf" selected>Capture the Flag</option>
+	<option value="koth" selected>King of the Hill</option>
+	<option value="arena">Arena</option>
+	<option value="pl" selected>Payload</option>
+	<option value="plr" selected>Payload Race</option>
+	<option value="tc">Territorial Control</option>
+</select><br/><br/>
+<label for="warmup">Warmup Mod</label><br/>
+<select name="warmup" id="warmup">
+<option value="mge">MGEMod</option>
+<option value="soap">SOAP TF2DM</option>
+</select><br/><br/>
+<label for="preset">Preset</label><br/>
+<select name="preset" id="preset">
+	<option value="" selected>No preset</option>
+	<option value="highlander">Highlander: 1 of each class, no off-classing</option>
+	<option value="6v6">6v6: 2 scouts, 2 soldiers, 1 demoman, 1 medic</option>
+	<option value="funmon">Funday Monday: 2 medics, 4 scouts, Kritzkrieg only</option>
+</select>
+<input type="button" value="Add Class" id="add-class" class="class-rules" />
+<div id="classes"></div>
+<pre>TODO:
+    ITEM RULES (Including stock weapons)
+        Allowed?
+        Required? (If a class can use it, they are forced to use one by SourceMod even if they don't have one)</pre>
+</body></html>
