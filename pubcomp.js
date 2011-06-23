@@ -158,7 +158,7 @@ socket.on( 'connection', function( client ) {
 					wp_auth.getUserMeta( user_id, 'pubcomp_steam_id', function( data ) {
 						if ( typeof data == 'string' ) {
 							var id64 = new bignumber( data );
-							data = 'STEAM_0:' + id64.mod( new bignumber( '2' ) ).toString() + ':' + id64.minus( new bignumber( '76561197960265728' ) ).shiftRight( 1 ).toString();
+							data = 'STEAM_0:' + id64.mod( new bignumber( '2' ) ).toString() + ':' + id64.subtract( new bignumber( '76561197960265728' ) ).shiftRight( 1 ).toString();
 							rcon.send( 'pubcomp_add_steamid ' + data );
 							client.send({ 'joinserver': config.SERVERIP + ':27015' });
 							return;
@@ -178,7 +178,7 @@ function filterLog( log, tf2state ) {
 	if ( tf2state == 'starting' ) return {};
 	if ( tf2state == 'almost' ) return { mapName: log.mapName };
 	var filtered = JSON.parse( JSON.stringify( log ) );
-	filtered.events = filtered.events.slice(Math.max(0, filtered.events.length - 5));
+	filtered.events = filtered.events.slice( Math.max( 0, filtered.events.length - 5 ) );
 	return filtered;
 }
 var current_update_file = null, prev_update_file = null, max_update_lag = 360, steam_pid = 0, file_lag = 0;
