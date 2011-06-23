@@ -35,8 +35,7 @@ require('./logsocket').create( function( line ) {
 				.password( tf2_rcon )
 				.send( 'pubcomp_add_steamid ""' )
 				.send( 'sv_downloadurl "http://' + config.SITEURL + '/tf/"' )
-				.send( 'mp_tournament 1; mp_tournament_allow_non_admin_restart 0' )
-				.send( 'tf_bot_add 12; tf_bot_quota_mode fill' );
+				.send( 'mp_tournament 1; mp_tournament_allow_non_admin_restart 0' );
 		require( 'util' ).log( 'TF2 state change: ' + tf2state + ' -> almost' );
 		tf2state = 'almost';
 		sendTF2State( socket );
@@ -72,8 +71,6 @@ process.on( 'exit', function() {
 		tf2.kill();
 	} catch ( ex ) {}
 } );
-
-//rconSend( 2, 'pubcomp_add_steamid STEAM_0:0:26649930' );
 
 function sendTF2State( client ) {
 	client.send ? client.send({ tf: tf2state }) : client.broadcast({ tf: tf2state });
@@ -163,7 +160,6 @@ socket.on( 'connection', function( client ) {
 							client.send({ 'joinserver': config.SERVERIP + ':27015' });
 							return;
 						}
-						//client.send({ message: 'Please connect your Steam ID to your PubComp account via your profile settings.' });
 					} );
 				} );
 				break;
@@ -178,7 +174,10 @@ function filterLog( log, tf2state ) {
 	if ( tf2state == 'starting' ) return {};
 	if ( tf2state == 'almost' ) return { mapName: log.mapName };
 	var filtered = JSON.parse( JSON.stringify( log ) );
-	filtered.events = filtered.events.slice( Math.max( 0, filtered.events.length - 5 ) );
+	filtered.events = filtered.events.filter( function( event ) {
+		return +event.timestamp >= new Date - 5000;
+	} );
+	filtered.players = filtered.players.filter( function( player ) { return player.online; } );
 	return filtered;
 }
 var current_update_file = null, prev_update_file = null, max_update_lag = 360, steam_pid = 0, file_lag = 0;

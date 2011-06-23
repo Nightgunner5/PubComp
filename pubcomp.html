@@ -5,11 +5,11 @@
 		<title>PubComp {SERVERNAME} Status</title
 		<meta name="generator" content="PubComp" />
 		<link rel="stylesheet" href="http://{SITEURL}/wp-content/plugins/buddypress/bp-themes/bp-default/style.css" type="text/css" media="screen" />
-		<script type='text/javascript' src='http://{SITEURL}/wp-content/plugins/buddypress/bp-themes/bp-default/_inc/global.js?ver=3.0.5'></script>
+		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
 		<link rel='index' title='PubComp' href='http://{SITEURL}/' />
 		<style type="text/css">#header{background-image:url(http://{SITEURL}/wp-content/plugins/buddypress/bp-themes/bp-default/_inc/images/default_header.jpg)}#header h1 a,#desc{color:#fff}</style>
 		<script type="text/javascript"> jQuery(document).ready( function() { jQuery("a.confirm").click( function() { if ( confirm( 'Are you sure?' ) ) return true; else return false; }); });</script>
-		<script src="/socket.io/socket.io.js"></script><style type="text/css">[id^="blurb-"] { display: none; }</style>
+		<script src="/socket.io/socket.io.js"></script>
 	</head>
 
 	<body class="page page-template page-template-serverstats" id="bp-default">
@@ -77,8 +77,9 @@
 </div> <!-- #container -->
 <script>
 var socket;
-window.onload = function(){
-	socket = new io.Socket( null, { port: {SOCKETPORT}, rememberTransport: true } ), status = document.getElementById( 'status' );
+$( function(){
+	$( '[id^="blurb-"]' ).hide();
+	socket = new io.Socket( null, { port: {SOCKETPORT}, rememberTransport: true } ), status = $( '#status' );
 	socket.connect();
 	var blurb;
 	socket.on('message', function( obj ) {
@@ -86,31 +87,25 @@ window.onload = function(){
 			return;
 		}
 		if ( 'numOnline' in obj ) {
-			status.innerHTML = obj.numOnline + ( obj.numOnline == 1 ? ' user on this page' : ' users on this page' );
+			status.text( obj.numOnline + ( obj.numOnline == 1 ? ' user on this page' : ' users on this page' ) );
 		}
 		if ( 'tf' in obj ) {
-			var create = document.getElementById( 'create' );
+			var create = $( '#create' );
 			switch ( obj.tf ) {
 				case 'online':
-					create.innerHTML = {WPCOOKIE}.length ? 'Join match' : 'Log in to join this match';
-					create.disabled = false;
-					create.onclick = {WPCOOKIE}.length ? function() {
-						socket.send( {action: 'join_match', cookie: {WPCOOKIE}} );
-					} : function() {
-						location.href = '{WPLOGIN}';
-					};
+					create.text( {WPCOOKIE}.length ? 'Join match' : 'Log in to join this match' ).removeProp( 'disabled' ).unbind( 'click' ).click( function(){
+						{WPCOOKIE}.length ? socket.send( {action: 'join_match', cookie: {WPCOOKIE}} ) : ( location.href = '{WPLOGIN}' );
+					} );
 					break;
 				default:
-					create.innerHTML = 'TF2 server status: ' + obj.tf;
-					create.disabled = true;
-					create.onclick = function(){};
+					create.text( 'TF2 server status: ' + obj.tf ).prop( 'disabled', true ).unbind( 'click' );
 					break;
 			}
-			if ( blurb ) {
-				blurb.style.display = 'none';
+			if ( blurb && blurb.attr( 'id' ) != ( 'blurb-' + obj.tf ) ) {
+				blurb.slideUp();
 			}
-			if ( blurb = document.getElementById( 'blurb-' + obj.tf ) ) {
-				blurb.style.display = 'block';
+			if ( ( blurb = $( '#blurb-' + obj.tf ) ).length ) {
+				blurb.slideDown();
 			}
 		}
 		if ( 'joinserver' in obj ) {
@@ -120,11 +115,11 @@ window.onload = function(){
 			var state = obj.state;
 			
 			if (  'update' in state ) {
-				document.getElementById( 'updatestatus' ).innerHTML = state.update.replace( /&/g, '&amp;' ).replace( /</g, '&lt;' );
+				$( '#updatestatus' ).text( state.update );
 				if ( 'file' in state && state.file ) {
-					document.getElementById( 'updatestatus' ).innerHTML += '\n\nCurrently checking file: ' + state.file;
+					$( '#updatestatus' ).append( document.createTextNode( '\n\nCurrently checking file: ' + state.file ) );
 					if ( state.lag > 5 ) {
-						document.getElementById( 'updatestatus' ).innerHTML += ' (' + state.lag + 's)';
+						$( '#updatestatus' ).append( document.createTextNode( ' (' + state.lag + 's)' ) );
 					}
 				}
 			}
@@ -136,36 +131,26 @@ window.onload = function(){
 						online++;
 				}
 			}
-			document.getElementById( 'player-count' ).innerHTML = ( online == 0 ? 'are no players' :
+			$( '#player-count' ).text( online == 0 ? 'are no players' :
 					( online == 1 ? 'is one player' : ( 'are ' + online + ' players' ) ) );
 			if ( online ) {
-				document.getElementById( 'game' ).style.display = 'block';
+				$( '#game' ).show();
 			} else {
-				document.getElementById( 'game' ).style.display = 'none';
+				$( '#game' ).hide();
 			}
-			document.getElementById( 'bluscore' ).innerHTML = state.blueScore;
-			document.getElementById( 'redscore' ).innerHTML = state.redScore;
-  /*var _log = {
-    blueScore: 0,
-    redScore: 0,
-    elapsedTime: 0,
-    gameSeconds: 0,
-    mapName: "",
-    events: [],
-    players: []
-  };*/
+			$( '#bluscore' ).text( state.blueScore );
+			$( '#redscore' ).text( state.redScore );
 		}
 		if ( window.console && console.log )
 			console.log( JSON.stringify( obj ) );
 	});
-	socket.on('connect', function(){ status.innerHTML = '' });
-	socket.on('disconnect', function(){ status.innerHTML = 'Lost connection.' });
-	socket.on('reconnect', function(){ status.innerHTML = '' });
-	socket.on('reconnecting', function( nextRetry ){ status.innerHTML = 'Lost connection. Retrying in ' + ( nextRetry / 1000 ) + ' seconds.'; });
-};
+	socket.on('connect', function(){ status.empty(); });
+	socket.on('disconnect', function(){ status.text( 'Lost connection.' ) });
+	socket.on('reconnect', function(){ status.empty() });
+	socket.on('reconnecting', function( nextRetry ){ status.text( 'Lost connection. Retrying in ' + ~~( nextRetry / 60000 ) + ':' + ( '00' + ~~( nextRetry / 1000 % 60 ) ).substr( -2 ) + '.' ); });
+} );
 </script>
 
-				
 		<div id="footer">
 	    	<p>PubComp is proudly powered by <a href="http://wordpress.org">WordPress</a> and <a href="http://buddypress.org">BuddyPress</a></p>
 		</div><!-- #footer -->
