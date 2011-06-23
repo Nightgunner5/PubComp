@@ -76,7 +76,7 @@ process.on( 'exit', function() {
 //rconSend( 2, 'pubcomp_add_steamid STEAM_0:0:26649930' );
 
 function sendTF2State( client ) {
-	client.broadcast({ tf: tf2state });
+	client.send ? client.send({ tf: tf2state }) : client.broadcast({ tf: tf2state });
 }
 
 var server = http.createServer( function( req, res ) {
@@ -149,21 +149,21 @@ socket.on( 'connection', function( client ) {
 			case 'join_match':
 				if ( !rcon )
 					break;
-				wp_auth.checkAuth( { headers: { cookie: message.cookie } } ).on( 'auth', function( auth_is_valid, user_id ) {
+				wp_auth.checkAuth( { headers: { cookie: wp_auth.cookiename + '=' + message.cookie } } ).on( 'auth', function( auth_is_valid, user_id ) {
 					if ( !auth_is_valid ) {
-						client.broadcast({ message: 'Please log in again. Your session has expired.' });
+						client.send({ message: 'Please log in again. Your session has expired.' });
 						return;
 					}
 
-					wp_auth.getUserMeta( user_id, 'pubcomp_steamid', function( data ) {
+					wp_auth.getUserMeta( user_id, 'pubcomp_steam_id', function( data ) {
 						if ( typeof data == 'string' ) {
 							var id64 = new bignumber( data );
-							data = 'STEAM_0:' + id64.mod( 2 ).toString() + ':' + id64.minus( new bignumber( '76561197960265728' ) ).shiftRight( 1 ).toString();
+							data = 'STEAM_0:' + id64.mod( new bignumber( '2' ) ).toString() + ':' + id64.minus( new bignumber( '76561197960265728' ) ).shiftRight( 1 ).toString();
 							rcon.send( 'pubcomp_add_steamid ' + data );
-							client.broadcast({ 'joinserver': config.SERVERIP + ':27015' });
+							client.send({ 'joinserver': config.SERVERIP + ':27015' });
 							return;
 						}
-						//client.broadcast({ message: 'Please connect your Steam ID to your PubComp account via your profile settings.' });
+						//client.send({ message: 'Please connect your Steam ID to your PubComp account via your profile settings.' });
 					} );
 				} );
 				break;
