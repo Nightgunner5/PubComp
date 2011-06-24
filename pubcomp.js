@@ -195,17 +195,16 @@ setInterval( function getCurrentUpdateFile() {
 		}
 
 		exec( 'ls -l /proc/' + steam_pid + '/fd', function( error, stdout, stderr ) {
-			if ( error || !stdout || stdout.indexOf( '/tfds/' ) == -1 ) {
+			if ( error || !stdout || stdout.lastIndexOf( '/tfds/' ) == -1 ) {
 				steam_pid = 0;
 				current_update_file = null;
 				return;
 			}
-			var filename = stdout.substr( stdout.indexOf( '/tfds/' ) + 6 );
+			var filename = stdout.substr( stdout.lastIndexOf( '/tfds/' ) + 6 );
 			if ( filename.indexOf( '\n' ) != -1 )
 				filename = filename.substr( 0, filename.indexOf( '\n' ) );
-			if ( filename == ' 0' ) {
+			if ( filename == ' 0' )
 				filename = null;
-			}
 			current_update_file = filename;
 			if ( filename && prev_update_file == current_update_file ) {
 				file_lag++;
@@ -222,11 +221,11 @@ setInterval( function getCurrentUpdateFile() {
 			}
 		} );
 	}
-}, 5000 );
+}, 1000 );
 setInterval( function() {
 	socket.broadcast( {
 		'numOnline': Object.keys( socket.clients ).length,
 		'tf': tf2state,
 		'state': tf2state == 'updating' ? { update: updatebuffer, file: current_update_file, lag: file_lag * 5 } : filterLog( log.getLog(), tf2state )
 	} );
-}, 5000 );
+}, 1000 );
