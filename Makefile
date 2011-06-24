@@ -6,7 +6,7 @@ pubcomp.smx: pubcomp.sp sourcemod/addons/sourcemod/scripting/spcomp config.inc v
 	./sourcemod/addons/sourcemod/scripting/spcomp pubcomp.sp
 
 version.inc:
-	bash -c 'echo "#define PLUGIN_VERSION  \"`git describe`\""' > version.inc
+	bash -c 'echo "#define PLUGIN_VERSION \"`git describe 2>/dev/null || echo 0.1`-`git log -1 --format=format:%H`\""' > version.inc
 
 sourcemod/addons/sourcemod/scripting/spcomp: sourcemod.tar.gz
 	mkdir -p sourcemod
