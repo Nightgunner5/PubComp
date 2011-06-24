@@ -1,45 +1,25 @@
 // For the first five games, a player is considered a newbie and is given first choice no matter what.
 exports.newbie = 5;
 
-exports.gametypes = {
-	'6v6': {
-		scout: 2,
-		pocketsoldier: 1,
-		roamingsoldier: 1,
-		demoman: 1,
-		medic: 1
-	},
-	'highlander': {
-		scout: 1,
-		soldier: 1,
-		pyro: 1,
-		demoman: 1,
-		engineer: 1,
-		heavyweapons: 1,
-		medic: 1,
-		sniper: 1,
-		spy: 1
-	}
+exports.debug = false;
+
+var config = exports.config = JSON.parse( require( 'fs' ).readFileSync( __dirname + '/config.json', 'utf8' ) );
+
+exports.getConfig = function() {
+	return JSON.parse( JSON.stringify( config ) );
 };
 
-exports.firstChoice = {
-	'6v6': {
-		scout: 0,
-		pocketsoldier: 0,
-		roamingsoldier: 0,
-		demoman: 0,
-		medic: 0
-	},
-	'highlander': {
-		scout: 0,
-		soldier: 0,
-		pyro: 0,
-		demoman: 0,
-		engineer: 0,
-		heavyweapons: 0,
-		medic: 0,
-		sniper: 0,
-		spy: 0
+var globalFirstChoice = {};
+Object.keys( config.positions ).forEach( function( position ) {
+	globalFirstChoice[position] = 0;
+} );
+
+exports.setGlobalFirstChoices = function( globalFirstChoices ) {
+	for ( var cls in globalFirstChoices ) {
+		if ( !( cls in globalFirstChoice ) )
+			throw new Error( 'Class ' + cls + ' not found in config file' );
+
+		globalFirstChoice[cls] = globalFirstChoices[cls];
 	}
 };
 
@@ -58,11 +38,14 @@ if ( !Array.prototype.shuffle ) {
     };
 }
 
-// players in the format [ { player: 'name', choices: ['class', 'class', 'class', ...], playtime: { class: matches, class: matches } }, ... ]
+// TODO: Add a method of preferring two players to be on the same team
+// players in the format [ { player: 'name', choices: ['role', 'role', 'role', ...], playtime: { role: matches, role: matches } }, ... ]
+// return value in the format [ { player: 'name', team: 'team', role: 'role' }, ... ]
 exports.chooseClasses = function( players, mode ) {
-	var needed = exports.gametypes[mode],
-		have = {},
-		given = {};
+	if ( !( mode in config.gameTypes ) ) {
+		throw new Error( 'Unknown game type: ' + mode );
+	}
+
 	players = Array.prototype.shuffle.call( players ).map( function( player ) {
 		player.games = 0;
 		for ( var cls in player.playtime )
@@ -70,46 +53,114 @@ exports.chooseClasses = function( players, mode ) {
 		return player;
 	} );
 
-	for ( var cls in needed ) {
-		have[cls] = 0;
+	var cfg = config.gameTypes[mode],
+		neededRed = {},
+		neededBlu = {},
+		given = [];
+
+	if ( players.length != cfg.players.length * 2 ) {
+		throw new Error( 'Have ' + players.length + ' players but need exactly ' + ( cfg.players.length * 2 ) + ' for ' + cfg.name + '.' );
 	}
 
-	// While there are players with fewer than N games played:
-	// If their first choice is available, they get it.
+	cfg.players.forEach( function( position ) {
+		neededRed[position] = neededRed[position] ? neededRed[position] + 1 : 1;
+		neededBlu[position] = neededBlu[position] ? neededBlu[position] + 1 : 1;
+	} );
+
+	// If there are players with fewer than N games played, give them their first choice (if available)
 	players.sort( function( a, b ) {
 		return b.games - a.games;
 	} ).forEach( function( player ) {
 		if ( player.games < exports.newbie ) {
-			if ( needed[player.choices[0]] && needed[player.choices[0]] < have[player.choices[0]] ) {
-				given[player.player] = player.choices[0];
-				have[player.choices[0]]++;
-				//console.log( '(1) Giving player %s role %s', player.player, given[player.player] );
+			if ( neededBlu[player.choices[0]] ) {
+				given.push( { player: player.player, team: 'Blue', role: player.choices[0] } );
+				neededBlu[player.choices[0]]--;
+				if ( exports.debug )
+					console.log( '(1) Giving player %s role %s on team %s', given[given.length - 1].player, given[given.length - 1].role, given[given.length - 1].team );
+				players.splice( players.indexOf( player ), 1 );
+				return;
+			}
+			if ( neededRed[player.choices[0]] ) {
+				given.push( { player: player.player, team: 'Red', role: player.choices[0] } );
+				neededRed[player.choices[0]]--;
+				if ( exports.debug )
+					console.log( '(1) Giving player %s role %s on team %s', given[given.length - 1].player, given[given.length - 1].role, given[given.length - 1].team );
+				players.splice( players.indexOf( player ), 1 );
 				return;
 			}
 		}
 	} );
 
-	var fc = {};
 	// While there are positions with as many or more openings than first choices, assign first choices to these openings.
+	var firstChoices = {};
 	players.forEach( function( player ) {
-		if ( !( player.player in given ) ) {
-			if ( player.choices[0] in fc )
-				fc[player.choices[0]]++;
-			else
-				fc[player.choices[0]] = 1;
-		}
+		if ( !( player.choices[0] in firstChoices ) )
+			firstChoices[player.choices[0]] = [player];
+		else
+			firstChoices[player.choices[0]].push( player );
 	} );
 
-	for ( var cls in fc ) {
-		if ( cls in needed && fc[cls] <= ( needed[cls] - have[cls] ) ) {
-			players.forEach( function( player ) {
-				if ( !( player.player in given ) && player.choices[0] == cls ) {
-					have[cls]++;
-					given[player.player] = cls;
-					//console.log( '(2) Giving player %s role %s', player.player, given[player.player] );
+	for ( var role in firstChoices ) {
+		if ( role in neededBlu && neededBlu[role] + neededRed[role] >= firstChoices[role].length ) {
+			firstChoices[role].forEach( function( player ) {
+				var team;
+				if ( neededBlu[role] ) {
+					neededBlu[role]--;
+					team = 'Blue';
+				} else {
+					neededRed[role]--;
+					team = 'Red';
 				}
+				given.push( { player: player.player, team: team, role: role } );
+				if ( exports.debug )
+					console.log( '(2) Giving player %s role %s on team %s', given[given.length - 1].player, given[given.length - 1].role, given[given.length - 1].team );
+				players.splice( players.indexOf( player ), 1 );
 			} );
 		}
+	}
+
+	function choosePlayerPosition( player, step ) {
+		var done = false;
+		player.choices.forEach( function( role ) {
+			if ( done ) return;
+			if ( neededBlu[role] ) {
+				done = true;
+				neededBlu[role]--;
+				given.push( { player: player.player, team: 'Blue', role: role } );
+				return;
+			}
+			if ( neededRed[role] ) {
+				done = true;
+				neededRed[role]--;
+				given.push( { player: player.player, team: 'Red', role: role } );
+				return;
+			}
+		} );
+
+		if ( !done ) {
+			for ( var role in neededBlu ) {
+				if ( neededBlu[role] ) {
+					done = true;
+					neededBlu[role]--;
+					given.push( { player: player.player, team: 'Blue', role: role } );
+					break;
+				}
+			}
+		}
+		if ( !done ) {
+			for ( var role in neededRed ) {
+				if ( neededRed[role] ) {
+					done = true;
+					neededRed[role]--;
+					given.push( { player: player.player, team: 'Red', role: role } );
+					break;
+				}
+			}
+		}
+
+		if ( exports.debug )
+			console.log( '(%d) Giving player %s role %s on team %s', step, given[given.length - 1].player, given[given.length - 1].role, given[given.length - 1].team );
+		players.splice( players.indexOf( player ), 1 );
 	}
 
 	// If any new players didn’t get their first choices, let them pick in ascending order of games played.
@@ -117,66 +168,34 @@ exports.chooseClasses = function( players, mode ) {
 		return b.games - a.games;
 	} ).forEach( function( player ) {
 		if ( player.games < exports.newbie ) {
-			for ( var i = 0; i < player.choices.length; i++ ) {
-				if ( needed[player.choices[i]] && needed[player.choices[i]] < have[player.choices[i]] ) {
-					given[player.player] = player.choices[i];
-					have[player.choices[i]]++;
-					//console.log( '(3) Giving player %s role %s', player.player, given[player.player] );
-					return;
-				}
-			}
+			choosePlayerPosition( player, 3 );
 		}
 	} );
 
 	// Return 0 if a / b would be division by zero; return a / b otherwise.
-	function customDiv( a, b ) { return b ? a / b : 0; }
+	function customDiv( a, b ) { return b ? ( a ? a : 0 ) / b : 0; }
+
+	var leastWantedRoles = Object.keys( globalFirstChoice ).sort( function( a, b ) {
+		return globalFirstChoice[b] - globalFirstChoice[a];
+	} );
 
 	// While players to pick:
 	// Let max(players, key=tuple(min(played %, required %) for role in leastWantedRoles)) pick.
-	var leastWantedRoles = {}, totalRoles = 0, totalFirstChoices = 0;
-	for ( var cls in needed ) {
-		totalRoles += needed[cls];
-		totalFirstChoices += exports.firstChoice[mode][cls];
+	players = players.sort( function( a, b ) {
+		for ( var i = 0; i < leastWantedRoles.length; i++ ) {
+			var role = leastWantedRoles[i],
+				as = Math.min( customDiv( a.playtime[role], a.games ), customDiv( cfg.players.filter( function( r ) { return r == role; } ).length, cfg.players.length ) ),
+				bs = Math.min( customDiv( b.playtime[role], b.games ), customDiv( cfg.players.filter( function( r ) { return r == role; } ).length, cfg.players.length ) );
+			if ( as > bs )
+				return -1;
+			if ( as < bs )
+				return 1;
+		}
+		return 0;
+	} );
+	while ( players[0] ) {
+		choosePlayerPosition( players[0], 4 );
 	}
-	for ( var cls in needed ) {
-		leastWantedRoles[cls] = customDiv( customDiv( exports.firstChoice[mode][cls], totalFirstChoices ), customDiv( needed[cls], totalRoles ) );
-	}
-	var playerScores = [];
-	players.forEach( function( player ) {
-		var score = 0;
-		for ( var role in leastWantedRoles ) {
-			score += customDiv( Math.min( customDiv( needed[role], totalRoles ), customDiv( player.playtime[role], player.games ) ), leastWantedRoles[role] );
-		}
-		playerScores.push( { player: player, score: score } );
-	} );
-
-	playerScores.sort( function( a, b ){
-		return a.score - b.score;
-	} ).forEach( function( score ) {
-		var player = score.player;
-		for ( var i = 0; i < player.choices.length; i++ ) {
-			if ( needed[player.choices[i]] && needed[player.choices[i]] > have[player.choices[i]] ) {
-				given[player.player] = player.choices[i];
-				have[player.choices[i]]++;
-				//console.log( '(4) Giving player %s role %s', player.player, given[player.player] );
-				return;
-			}
-		}
-	} );
-
-	// Everyone who hasn't been given a role gets one that is left over.
-	Array.prototype.shuffle.call( players ).forEach( function( player ) {
-		if ( player.player in given )
-			return;
-		for ( var role in needed ) {
-			if ( needed[role] > have[role] ) {
-				given[player.player] = role;
-				have[role]++;
-				//console.log( '(5) Giving player %s role %s', player.player, given[player.player] );
-				return;
-			}
-		}
-	} );
 
 	return given;
 };
