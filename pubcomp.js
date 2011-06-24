@@ -22,6 +22,36 @@ var http = require( 'http' ),
 
 process.chdir( __dirname );
 
+function getPlayerUserIDs( players, callback ) {
+	var steamIDs = [];
+
+	players.forEach( function( player ) {
+		if ( player.online ) {
+			var id = player.steamID.split( /:/ );
+			if ( id[0] == 'STEAM_0' ) { // Ignore bots
+				var id64 = new bignumber( '76561197960265728' ).add( new bignumber( id[2] ).shiftLeft( 1 ) ).add( new bignumber( id[1] ) );
+				steamIDs.push( id64.toString() );
+			}
+		}
+	} );
+
+	var playerIDs = [], numReturned = 0;
+
+	steamIDs.forEach( function( steamID ) {
+		wp_auth.reverseUserMeta( 'pubcomp_steam_id', steamID, function( id ) {
+			numReturned++;
+			if ( id ) {
+				playerIDs.push( id );
+			} else {
+				// TODO: What do we do if a user cannot be found?
+			}
+			if ( numReturned == steamIDs.length ) {
+				callback( playerIDs );
+			}
+		} );
+	} );
+}
+
 var log = logparser.create(), filelog = fs.createWriteStream( 'debug.log' );
 require('./logsocket').create( function( line ) {
 	filelog.write( line + '\n', 'utf8' );
@@ -44,6 +74,13 @@ require('./logsocket').create( function( line ) {
 		require( 'util' ).log( 'TF2 state change: ' + tf2state + ' -> online' );
 		tf2state = 'online';
 		sendTF2State( socket );
+	}
+	if ( line.indexOf( 'PubComp: Requesting team and position assignments...' ) != -1 && line.indexOf( '"' ) == -1 && tf2state == 'online' ) {
+		// Send class and team assignments to the server via RCON.
+		getPlayerUserIDs( log.getLog().players, function( userIDs ) {
+			console.log( 'User IDs: %s', JSON.stringify( userIDs ) );
+			// TODO
+		} );
 	}
 } ).bind( 57015, '127.0.0.2' ); // 127.0.0.1 doesn't work for some odd reason
 

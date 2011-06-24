@@ -146,6 +146,7 @@ public ExecuteGameCommands() {
 	for ( new i = 0; i < commandCount; i++ ) {
 		ServerCommand(gameCommands[i]);
 	}
+	commandCount = 0;
 }
 
 // These functions and globals are for setting, activating and
@@ -249,6 +250,7 @@ public Timer:PubCompStartGame(Handle:data) {
         //
         // It should send us (through rcon console commands) team
         // assignments and position assignments.
+        LogMessage( "PubComp: Requesting team and position assignments..." );
 
         ServerCommand("mp_tournament 0");
         ServerCommand(warmupActivationCommands[activeWarmupMode][DISABLE]);
@@ -269,5 +271,6 @@ public Timer:PubCompStartGame2(Handle:data) {
 }
 
 public Timer:PubCompStartGame3(Handle:data) {
+        ExecuteGameCommands();
         PrintCenterTextAll("----Game is LIVE----");
 }
