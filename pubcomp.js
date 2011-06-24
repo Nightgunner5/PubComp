@@ -55,10 +55,15 @@ function getPlayerUserIDs( players, callback ) {
 var log = logparser.create(), filelog = fs.createWriteStream( 'debug.log' );
 require('./logsocket').create( function( line ) {
 	filelog.write( line + '\n', 'utf8' );
+	var logSnapshot = JSON.stringify( filterLog( log.getLog(), tf2state ) );
 	log.parseLine( line );
+	if ( JSON.stringify( filterLog( log.getLog(), tf2state ) ) != logSnapshot ) {
+		socket.broadcast( { state: filterLog( log.getLog(), tf2state ) } );
+	}
 	if ( tf2state == 'updating' || tf2state == 'unknown' ) {
 		require( 'util' ).log( 'TF2 state change: ' + tf2state + ' -> starting' );
 		tf2state = 'starting';
+		socket.broadcast( { tf: 'starting' } );
 	}
 	if ( line.indexOf( 'Started map' ) != -1 && !rcon ) {
 		rcon = require('./rcon').create( 27015, '127.0.0.1' )
@@ -68,12 +73,12 @@ require('./logsocket').create( function( line ) {
 				.send( 'mp_tournament 1; mp_tournament_allow_non_admin_restart 0' );
 		require( 'util' ).log( 'TF2 state change: ' + tf2state + ' -> almost' );
 		tf2state = 'almost';
-		sendTF2State( socket );
+		socket.broadcast( { tf: 'almost' } );
 	}
 	if ( line.indexOf( 'rcon from "' ) != -1 && tf2state != 'online' ) {
 		require( 'util' ).log( 'TF2 state change: ' + tf2state + ' -> online' );
 		tf2state = 'online';
-		sendTF2State( socket );
+		socket.broadcast( { tf: 'online' } );
 	}
 	if ( line.indexOf( 'PubComp: Requesting team and position assignments...' ) != -1 && line.indexOf( '"' ) == -1 && tf2state == 'online' ) {
 		// Send class and team assignments to the server via RCON.
@@ -109,8 +114,11 @@ process.on( 'exit', function() {
 	} catch ( ex ) {}
 } );
 
-function sendTF2State( client ) {
-	client.send ? client.send({ tf: tf2state }) : client.broadcast({ tf: tf2state });
+function sendFullState( client ) {
+	client.send( {
+		tf: tf2state,
+		state: tf2state == 'updating' ? { update: updatebuffer, file: current_update_file, lag: file_lag } : filterLog( log.getLog(), tf2state )
+	} );
 }
 
 var server = http.createServer( function( req, res ) {
@@ -169,17 +177,14 @@ server.listen( config.SOCKETPORT );
 
 var socket = io.listen( server );
 socket.on( 'connection', function( client ) {
-	socket.broadcast({ 'numOnline': Object.keys( socket.clients ).length });
-	sendTF2State( client );
+	socket.broadcast( { 'numOnline': Object.keys( socket.clients ).length } );
+	sendFullState( client );
 
 	client.on('message', function(message){
 		if ( typeof message != 'object' ) {
 			return;
 		}
 		switch ( message.action ) {
-			case 'tf':
-				sendTF2State( client );
-				break;
 			case 'join_match':
 				if ( !rcon )
 					break;
@@ -204,7 +209,7 @@ socket.on( 'connection', function( client ) {
 	});
 
 	client.on('disconnect', function() {
-		socket.broadcast({ 'numOnline': Object.keys( socket.clients ).length });
+		socket.broadcast( { 'numOnline': Object.keys( socket.clients ).length - 1 } );
 	});
 } );
 function filterLog( log, tf2state ) {
@@ -212,7 +217,7 @@ function filterLog( log, tf2state ) {
 	if ( tf2state == 'almost' ) return { mapName: log.mapName };
 	var filtered = JSON.parse( JSON.stringify( log ) );
 	filtered.events = filtered.events.filter( function( event ) {
-		return +event.timestamp >= new Date - 5000;
+		return +event.timestamp >= new Date - 1000;
 	} );
 	filtered.players = filtered.players.filter( function( player ) { return player.online; } );
 	return filtered;
@@ -243,26 +248,41 @@ setInterval( function getCurrentUpdateFile() {
 			if ( filename == ' 0' )
 				filename = null;
 			current_update_file = filename;
+			var old_lag = file_lag;
 			if ( filename && prev_update_file == current_update_file ) {
 				file_lag++;
 			} else {
 				file_lag = 0;
 			}
+			var change = {};
+			if ( current_update_file != prev_update_file ) {
+				change.file = current_update_file;
+			}
+			if ( old_lag != file_lag ) {
+				change.lag = file_lag;
+			}
 			prev_update_file = current_update_file;
 			if ( file_lag > max_update_lag ) {
 				require( 'util' ).log( 'Steam process seems to be hanging; stuck on ' + filename + ' for over 30 minutes. Killing update...' );
 				updatebuffer += 'PubComp: Steam process seems to be hanging; stuck on ' + filename + ' for over 30 minutes.\nPubComp: Killing update...\n';
+				change.update_add = 'PubComp: Steam process seems to be hanging; stuck on ' + filename + ' for over 30 minutes.\nPubComp: Killing update...\n';
+				change.file = null;
+				change.lag = 0;
 				exec( 'kill ' + steam_pid );
 				prev_update_file = null;
 				current_update_file = null;
 			}
+			if ( change )
+				socket.broadcast( {
+					state: change
+				} );
 		} );
 	}
 }, 1000 );
-setInterval( function() {
+/*setInterval( function() {
 	socket.broadcast( {
 		'numOnline': Object.keys( socket.clients ).length,
 		'tf': tf2state,
 		'state': tf2state == 'updating' ? { update: updatebuffer, file: current_update_file, lag: file_lag } : filterLog( log.getLog(), tf2state )
 	} );
-}, 1000 );
+}, 1000 );*/
