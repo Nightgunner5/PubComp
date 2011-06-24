@@ -21,9 +21,14 @@ new commandCount = 0;
 
 public OnPluginStart() {
 	RegConsoleCmd( "pubcomp_add_steamid", CommandAddSteamID, "", FCVAR_PLUGIN );
-	RegConsoleCmd( "pubcomp_set_warmup_mod", CommandSetWarmupMod, "", FCVAR_PLUGIN );
-	RegConsoleCmd( "pubcomp_add_game_command", CommandAddGameCommand, "", FCVAR_PLUGIN );
-	RegConsoleCmd( "pubcomp_reset_game_commands", CommandResetGameCommands, "", FCVAR_PLUGIN );
+        RegConsoleCmd( "pubcomp_set_warmup_mod", CommandSetWarmupMod, "", FCVAR_PLUGIN);
+        RegConsoleCmd( "pubcomp_add_game_command", CommandAddGameCommand, "", FCVAR_PLUGIN);
+        RegConsoleCmd( "pubcomp_reset_game_commands", CommandResetGameCommands, "", FCVAR_PLUGIN);
+        RegConsoleCmd( "pubcomp_add_game_position", CommandResetGameCommands, "", FCVAR_PLUGIN);
+
+        RegConsoleCmd( "say", ReadyUnready, "", FCVAR_PLUGIN);
+
+        ServerCommand("mp_waitingforplayers_cancel 1");
 }
 
 bool:findSteamID( const String:id[] ) {
@@ -147,6 +152,8 @@ public ExecuteGameCommands() {
 // deactivating the desired pre-game/pause warmup mode.
 
 #define NUM_WARMUP_MODES 2
+#define ENABLE 0
+#define DISABLE 1
 new String:warmupModes[NUM_WARMUP_MODES + 1][16] = {"NONE", "SOAP", "MGE"};
 new activeWarmupMode;
 new String:warmupActivationCommands[NUM_WARMUP_MODES + 1][2][MAX_COMMAND_LENGTH] = {
@@ -163,18 +170,104 @@ public Action:CommandSetWarmupMod( client, args ) {
 	decl String:modeName[20];
 	GetCmdArgString( modeName, sizeof( modeName ) );
 
-	activeWarmupMode = 0;
-	for ( new i = 0; i < NUM_WARMUP_MODES + 1; i++ ) {
-		if ( strcmp(modeName, warmupModes[i]) == 0 ) {
-			activeWarmupMode = i;
-		}
-		ServerCommand( warmupActivationCommands[i][1] );
-	}
-	if ( activeWarmupMode == 0 ) {
-		LogMessage( "Could not find warmup mode \"%s\".", modeName );
-		return Plugin_Stop;
-	}
-	ServerCommand( warmupActivationCommands[activeWarmupMode][0] );
+        activeWarmupMode = -1;
+        for (new i = 0; i < NUM_WARMUP_MODES + 1; i++) {
+                if (strcmp(modeName, warmupModes[i]) == 0) {
+                        activeWarmupMode = i;
+                }
+                ServerCommand(warmupActivationCommands[i][1]);
+        }
+        if (activeWarmupMode == -1) {
+                LogMessage("Could not find warmup mode \"%s\".", modeName);
+                return Plugin_Stop;
+        }
+        ServerCommand(warmupActivationCommands[activeWarmupMode][0]);
 
-	return Plugin_Handled;
+        return Plugin_Handled;
+}
+
+// Track player ready states and start a game when we have enough
+// ready players.
+
+new bool:playerReady[MAXPLAYERS+1];
+new playersNeeded = 1;
+
+new Handle:gameCountdown = INVALID_HANDLE;
+
+public Action:ReadyUnready(client, args) {
+        decl String:text[192];
+        GetCmdArg(1, text, sizeof(text));
+
+        if (strcmp(text, ".ready") == 0 || strcmp(text, ".gaben") == 0) {
+                playerReady[client] = true;
+
+                decl String:playerName[32];
+                GetClientName(client, playerName, sizeof(playerName));
+                PrintToChatAll("Player %s is now ready.", playerName);
+        }
+
+        if (strcmp(text, ".notready") == 0 || strcmp(text, ".unready") == 0) {
+                playerReady[client] = false;
+
+                decl String:playerName[32];
+                GetClientName(client, playerName, sizeof(playerName));
+                PrintToChatAll("Player %s is no longer ready.", playerName);
+        }
+
+        new readyCount = 0;
+        for (new i = 0; i < MAXPLAYERS+1; i++) {
+                readyCount += playerReady[i] ? 1 : 0;
+        }
+        if (readyCount == playersNeeded) {
+                gameCountdown = CreateTimer(float(GAME_START_DELAY), Timer:PubCompStartGame);
+                new seconds = GAME_START_DELAY % 60;
+                new minutes = GAME_START_DELAY / 60;
+                PrintToChatAll("%d players are now ready.", readyCount);
+                if (minutes == 0) {
+                        PrintToChatAll("Game Starts in %d seconds.", seconds);
+                } else if (seconds == 0) {
+                        PrintToChatAll("Game Starts in %d minutes.", minutes);
+                } else {
+                        PrintToChatAll("Game Starts in %d minutes and %d seconds.", minutes, seconds);
+                }
+        } else if (gameCountdown != INVALID_HANDLE) {
+                KillTimer(gameCountdown);
+                gameCountdown = INVALID_HANDLE;
+                PrintToChatAll("Down to %d ready player%s.  Countdown canceled.", readyCount, readyCount == 1 ? "" : "s");
+        } else {
+        }
+
+        return Plugin_Continue;
+}
+
+public Timer:PubCompStartGame(Handle:data) {
+        // Tell node we're starting a game here.  Node should already
+        // have the steamids of the players in the game, and their map
+        // and position preferences will be entered through the web,
+        // so it will have those as well.  So we don't have to send
+        // anything except a message that we're starting the game.
+        //
+        // It should send us (through rcon console commands) team
+        // assignments and position assignments.
+
+        ServerCommand("mp_tournament 0");
+        ServerCommand(warmupActivationCommands[activeWarmupMode][DISABLE]);
+        // TODO: Put players on their respective teams and alert them
+        // that they are now on that team.
+        ServerCommand("mp_restartgame 1");
+        CreateTimer(1.0, Timer:PubCompStartGame2);
+}
+
+public Timer:PubCompStartGame2(Handle:data) {
+        PrintCenterTextAll("Setup Classes.  Game will start in %d seconds.", SETUP_CLASSES_TIME);
+        LogToGame("Setup Classes.  Game will start in %d seconds.", SETUP_CLASSES_TIME);
+        // TODO: Inform players of the classes they drew and engage
+        // the class limit freezer.
+
+        ServerCommand("mp_restartgame %d", SETUP_CLASSES_TIME);
+        CreateTimer(float(SETUP_CLASSES_TIME + 1), Timer:PubCompStartGame3);
+}
+
+public Timer:PubCompStartGame3(Handle:data) {
+        PrintCenterTextAll("----Game is LIVE----");
 }

@@ -1,0 +1,6 @@
+version.inc
+*.smx
+*.pyc
+
+sourcemod.tar.gz
+sourcemod/*
