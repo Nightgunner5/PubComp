@@ -1,0 +1,144 @@
+pubcomp {
+	rules {
+		tf_weapon_criticals 0
+		tf_damage_disablespread 1
+		tf_user_fixed_weaponspreads 1
+		mp_autoteambalance 0
+		mp_waitingforplayerscancel 1
+	}
+	positions {
+		utility {
+			name Scout
+			classes {
+				class scout
+				class pyro
+				class heavyweapons
+				class engineer
+				class sniper
+				class spy
+			}
+		}
+		pocket {
+			name "Pocket Soldier"
+			classes {
+				class soldier
+				class pyro
+				class heavyweapons
+			}
+		}
+		roamer {
+			name "Roaming Soldier"
+			classes {
+				class soldier
+				class pyro
+				class heavyweapons
+				class engineer
+				class sniper
+				class spy
+			}
+		}
+		scout {
+			name Scout
+			classes {
+				class scout
+			}
+		}
+		soldier {
+			name Soldier
+			classes {
+				class soldier
+			}
+		}
+		pyro {
+			name Pyro
+			classes {
+				class pyro
+			}
+		}
+		demo {
+			name Demoman
+			classes {
+				class demoman
+			}
+		}
+		heavy {
+			name Heavy
+			classes {
+				class heavyweapons
+			}
+		}
+		engineer {
+			name Engie
+			classes {
+				class engineer
+			}
+		}
+		medic {
+			name Medic
+			classes {
+				class medic
+			}
+		}
+		sniper {
+			name Sniper
+			classes {
+				class sniper
+			}
+		}
+		spy {
+			name Spy
+			classes {
+				class spy
+			}
+		}
+	}
+	gameTypes {
+		6v6 {
+			name "Standard 6v6"
+			players {
+				player utility
+				player utility
+				player roamer
+				player pocket
+				player demo
+				player medic
+			}
+			limits {
+				scout 2
+				soldier 2
+				pyro 2
+				demoman 1
+				heavyweapons 1
+				engineer 1
+				medic 1
+				sniper 2
+				spy 2
+			}
+		}
+		highlander {
+			name Highlander
+			players {
+				player scout
+				player soldier
+				player pyro
+				player demo
+				player heavy
+				player engineer
+				player medic
+				player sniper
+				player spy
+			}
+			limits {
+				scout 1
+				soldier 1
+				pyro 1
+				demo 1
+				heavy 1
+				engineer 1
+				medic 1
+				sniper 1
+				spy 1
+			}
+		}
+	}
+}

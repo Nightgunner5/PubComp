@@ -1,0 +1,75 @@
+{ "rules": {
+	"tf_weapon_criticals": false,
+	"tf_damage_disablespread": true,
+	"tf_user_fixed_weaponspreads": true,
+	"mp_autoteambalance": false,
+	"mp_waitingforplayerscancel": true
+}, "positions": {
+	"utility": {
+		"name": "Scout",
+		"classes": ["scout", "pyro", "heavyweapons", "engineer", "sniper", "spy"]
+	}, "pocket": {
+		"name": "Pocket Soldier",
+		"classes": ["soldier", "pyro", "heavyweapons"]
+	}, "roamer": {
+		"name": "Roaming Soldier",
+		"classes": ["soldier", "pyro", "heavyweapons", "engineer", "sniper", "spy"]
+	}, "scout": {
+		"name": "Scout",
+		"classes": ["scout"]
+	}, "soldier": {
+		"name": "Soldier",
+		"classes": ["soldier"]
+	}, "pyro": {
+		"name": "Pyro",
+		"classes": ["pyro"]
+	}, "demo": {
+		"name": "Demoman",
+		"classes": ["demoman"]
+	}, "heavy": {
+		"name": "Heavy",
+		"classes": ["heavyweapons"]
+	}, "engineer": {
+		"name": "Engie",
+		"classes": ["engineer"]
+	}, "medic": {
+		"name": "Medic",
+		"classes": ["medic"]
+	}, "sniper": {
+		"name": "Sniper",
+		"classes": ["sniper"]
+	}, "spy": {
+		"name": "Spy",
+		"classes": ["spy"]
+	}
+}, "gameTypes": {
+	"6v6": {
+		"name": "Standard 6v6",
+		"players": ["utility", "utility", "roamer", "pocket", "demo", "medic"],
+		"limits": {
+			"scout": 2,
+			"soldier": 2,
+			"pyro": 2,
+			"demoman": 1,
+			"heavyweapons": 1,
+			"engineer": 1,
+			"medic": 1,
+			"sniper": 2,
+			"spy": 2
+		}
+	}, "highlander": {
+		"name": "Highlander",
+		"players": ["scout", "soldier", "pyro", "demo", "heavy", "engineer", "medic", "sniper", "spy"],
+		"limits": {
+			"scout": 1,
+			"soldier": 1,
+			"pyro": 1,
+			"demo": 1,
+			"heavy": 1,
+			"engineer": 1,
+			"medic": 1,
+			"sniper": 1,
+			"spy": 1
+		}
+	}
+}
