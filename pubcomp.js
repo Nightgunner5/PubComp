@@ -217,7 +217,7 @@ function filterLog( log, tf2state ) {
 	filtered.players = filtered.players.filter( function( player ) { return player.online; } );
 	return filtered;
 }
-var current_update_file = null, prev_update_file = null, max_update_lag = 360, steam_pid = 0, file_lag = 0;
+var current_update_file = null, prev_update_file = null, max_update_lag = 1800, steam_pid = 0, file_lag = 0;
 setInterval( function getCurrentUpdateFile() {
 	if ( tf2state == 'updating' ) {
 		if ( !steam_pid ) {
@@ -263,6 +263,6 @@ setInterval( function() {
 	socket.broadcast( {
 		'numOnline': Object.keys( socket.clients ).length,
 		'tf': tf2state,
-		'state': tf2state == 'updating' ? { update: updatebuffer, file: current_update_file, lag: file_lag * 5 } : filterLog( log.getLog(), tf2state )
+		'state': tf2state == 'updating' ? { update: updatebuffer, file: current_update_file, lag: file_lag } : filterLog( log.getLog(), tf2state )
 	} );
 }, 1000 );
