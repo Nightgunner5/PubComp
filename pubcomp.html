@@ -81,9 +81,9 @@
 var socket;
 $( function(){
 	$( '[id^="blurb-"]' ).hide();
-	socket = new io.Socket( null, { port: {SOCKETPORT}, rememberTransport: true } ), status = $( '#status' );
+	socket = new io.Socket( null, { port: {SOCKETPORT}, rememberTransport: true } );
 	socket.connect();
-	var blurb;
+	var blurb, status = $( '#status' );
 	socket.on('message', function( obj ) {
 		if ( typeof obj != 'object' ) {
 			return;

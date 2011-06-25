@@ -1,5 +1,6 @@
 #include <sourcemod>
 #include <string>
+#include <usermessages>
 
 #include "config.inc"
 #include "version.inc"
@@ -25,6 +26,7 @@ public OnPluginStart() {
         RegConsoleCmd( "pubcomp_add_game_command", CommandAddGameCommand, "", FCVAR_PLUGIN);
         RegConsoleCmd( "pubcomp_reset_game_commands", CommandResetGameCommands, "", FCVAR_PLUGIN);
         RegConsoleCmd( "pubcomp_add_game_position", CommandResetGameCommands, "", FCVAR_PLUGIN);
+	RegConsoleCmd( "pubcomp_start_item_vote", CommandStartItemVote, "", FCVAR_PLUGIN );
 
         RegConsoleCmd( "say", ReadyUnready, "", FCVAR_PLUGIN);
 
@@ -273,4 +275,30 @@ public Timer:PubCompStartGame2(Handle:data) {
 public Timer:PubCompStartGame3(Handle:data) {
         ExecuteGameCommands();
         PrintCenterTextAll("----Game is LIVE----");
+}
+
+
+public Action:CommandStartItemVote( client, args ) {
+	if ( client != 0 ) {
+		LogMessage( "Client %d is not permitted to start an item vote.", client );
+		return Plugin_Stop;
+	}
+
+	new Handle:vote = StartMessageAll( "VoteStart", USERMSG_RELIABLE );
+	BfWriteByte( vote, 255 );   // Send to both teams
+	BfWriteByte( vote, 0 );     // Comes from world
+	BfWriteString( vote, "PubComp: What items should be allowed during this match?" ); // Vote description
+	BfWriteString( vote, "" );  // We're not translating on the client side, so this is blank
+	BfWriteBool( vote, false ); // This is not a yes/no vote
+	EndMessage();
+
+	vote = StartMessageAll( "vote_options", USERMSG_RELIABLE );
+	BfWriteByte( vote, 4 ); // 4 options
+	BfWriteString( vote, "Vanilla" );    // No unlockable weapons
+	BfWriteString( vote, "Cinnamon" );   // WTF IS THIS
+	BfWriteString( vote, "Lax" );        // ???
+	BfWriteString( vote, "Everything" ); // No restrictions
+	EndMessage();
+
+	return Plugin_Handled;
 }
